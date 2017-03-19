@@ -100,7 +100,6 @@ static const char *op_labels [OP_MAX] = {
 	[OP_MOD]    = "Mod            (2:1)",
 	[OP_EXP]    = "Exp            (1:1)",
 	[OP_EXP_2]  = "Exp2           (1:1)",
-	[OP_EXP_10] = "Exp10          (1:1)",
 	[OP_LOG]    = "Log            (1:1)",
 	[OP_LOG_2]  = "Log2           (1:1)",
 	[OP_LOG_10] = "Log10          (1:1)",

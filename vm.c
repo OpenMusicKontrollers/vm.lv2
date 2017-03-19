@@ -25,12 +25,12 @@
 #define SLOT_MAX 32
 #define REG_MAX 32
 
-typedef struct _stack_t stack_t;
+typedef struct _vm_stack_t vm_stack_t;
 typedef struct _plughandle_t plughandle_t;
 
 typedef double num_t;
 
-struct _stack_t {
+struct _vm_stack_t {
 	num_t slots [SLOT_MAX];
 	num_t regs [REG_MAX];
 };
@@ -60,7 +60,7 @@ struct _plughandle_t {
 	uint32_t graph_size;
 	opcode_t opcode;
 
-	stack_t stack;
+	vm_stack_t stack;
 	bool recalc;
 	bool sync;
 	bool is_dynamic;
@@ -72,14 +72,14 @@ struct _plughandle_t {
 };
 
 static inline void
-_stack_clear(stack_t *stack)
+_stack_clear(vm_stack_t *stack)
 {
 	for(unsigned i = 0; i < SLOT_MAX; i++)
 		stack->slots[i] = 0.f;
 }
 
 static inline void
-_stack_push(stack_t *stack, num_t val)
+_stack_push(vm_stack_t *stack, num_t val)
 {
 	for(unsigned i = SLOT_MAX - 1; i >= 1; i--)
 		stack->slots[i] = stack->slots[i - 1];
@@ -88,7 +88,7 @@ _stack_push(stack_t *stack, num_t val)
 }
 
 static inline num_t
-_stack_pop(stack_t *stack)
+_stack_pop(vm_stack_t *stack)
 {
 	const num_t val = stack->slots[0];
 
@@ -101,7 +101,7 @@ _stack_pop(stack_t *stack)
 }
 
 static inline void
-_stack_push_num(stack_t *stack, const num_t *val, unsigned num)
+_stack_push_num(vm_stack_t *stack, const num_t *val, unsigned num)
 {
 	for(unsigned i = SLOT_MAX - 1; i >= num; i--)
 		stack->slots[i] = stack->slots[i - num];
@@ -111,7 +111,7 @@ _stack_push_num(stack_t *stack, const num_t *val, unsigned num)
 }
 
 static inline void
-_stack_pop_num(stack_t *stack, num_t *val, unsigned num)
+_stack_pop_num(vm_stack_t *stack, num_t *val, unsigned num)
 {
 	for(unsigned i = 0; i < num; i++)
 		val[i] = stack->slots[i];
@@ -124,7 +124,7 @@ _stack_pop_num(stack_t *stack, num_t *val, unsigned num)
 }
 
 static inline num_t
-_stack_peek(stack_t *stack)
+_stack_peek(vm_stack_t *stack)
 {
 	const num_t val = stack->slots[0];
 
@@ -409,12 +409,6 @@ run(LV2_Handle instance, uint32_t nsamples)
 						{
 							const num_t a = _stack_pop(&handle->stack);
 							const num_t c = exp2(a);
-							_stack_push(&handle->stack, c);
-						} break;
-						case OP_EXP_10:
-						{
-							const num_t a = _stack_pop(&handle->stack);
-							const num_t c = exp10(a);
 							_stack_push(&handle->stack, c);
 						} break;
 						case OP_LOG:

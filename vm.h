@@ -51,7 +51,6 @@
 #define VM__opMod            VM_PREFIX"opMod"
 #define VM__opExp            VM_PREFIX"opExp"
 #define VM__opExp2           VM_PREFIX"opExp2"
-#define VM__opExp10          VM_PREFIX"opExp10"
 #define VM__opLog            VM_PREFIX"opLog"
 #define VM__opLog2           VM_PREFIX"opLog2"
 #define VM__opLog10          VM_PREFIX"opLog10"
@@ -105,7 +104,6 @@ enum _opcode_enum_t{
 	OP_MOD,
 	OP_EXP,
 	OP_EXP_2,
-	OP_EXP_10,
 	OP_LOG,
 	OP_LOG_2,
 	OP_LOG_10,
@@ -181,7 +179,6 @@ static const char *opcode_uris [OP_MAX] = {
 	[OP_MOD]    = VM__opMod,
 	[OP_EXP]    = VM__opExp,
 	[OP_EXP_2]  = VM__opExp2,
-	[OP_EXP_10] = VM__opExp10,
 	[OP_LOG]    = VM__opLog,
 	[OP_LOG_2]  = VM__opLog2,
 	[OP_LOG_10] = VM__opLog10,

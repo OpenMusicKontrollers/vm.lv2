@@ -95,9 +95,6 @@ vm:opExp
 vm:opExp2
 	a rdfs:Class, owl:Class ;
 	rdfs:label "Exponentiation base 2" .
-vm:opExp10
-	a rdfs:Class, owl:Class ;
-	rdfs:label "Exponentiation base 10" .
 vm:opLog
 	a rdfs:Class, owl:Class ;
 	rdfs:label "Logarithm" .
