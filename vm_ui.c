@@ -195,6 +195,22 @@ _deref(LV2_Atom_Forge_Sink_Handle handle, LV2_Atom_Forge_Ref ref)
 }
 
 static void
+_restore_state(plughandle_t *handle)
+{
+	atom_ser_t *ser = &handle->ser;
+	ser->offset = 0;
+	lv2_atom_forge_set_sink(&handle->forge, _sink, _deref, ser);
+
+	LV2_Atom_Forge_Frame frame;
+	lv2_atom_forge_object(&handle->forge, &frame, 0, handle->props.urid.patch_get);
+	lv2_atom_forge_pop(&handle->forge, &frame);
+
+	const LV2_Atom *atom = ser->atom;
+	handle->writer(handle->controller, 0, lv2_atom_total_size(atom),
+		handle->atom_eventTransfer, atom);
+}
+
+static void
 _set_property(plughandle_t *handle, LV2_URID property)
 {
 	atom_ser_t *ser = &handle->ser;
@@ -499,6 +515,8 @@ instantiate(const LV2UI_Descriptor *descriptor, const char *plugin_uri,
 	atom_ser_t *ser = &handle->ser;
 	ser->size = 1024;
 	ser->buf = malloc(ser->size);
+
+	_restore_state(handle);
 
 	return handle;
 }
