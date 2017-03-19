@@ -77,30 +77,58 @@ struct _plughandle_t {
 	command_t cmds [ITEMS_MAX];
 };
 
-static const char *op_labels [] = {
-	[OP_NOP]    = "-",
-	[OP_PUSH]   = "Push",
-	[OP_ADD]    = "Add",
-	[OP_SUB]    = "Sub",
-	[OP_MUL]    = "Mul",
-	[OP_DIV]    = "Div",
-	[OP_NEG]    = "Neg",
-	[OP_POW]    = "Pow",
-	[OP_SQRT]   = "Sqrt",
-	[OP_EXP]    = "Exp",
-	[OP_EXP_2]  = "Exp2",
-	[OP_EXP_10] = "Exp10",
-	[OP_LOG]    = "Log",
-	[OP_LOG_2]  = "Log2",
-	[OP_LOG_10] = "Log10",
-	[OP_SIN]    = "Sin",
-	[OP_COS]    = "Cos",
-	[OP_SWAP]   = "Swap"
+typedef struct _desc_t desc_t;
+
+struct _desc_t {
+	const char *label;
+	unsigned npush;
+	unsigned npop;
 };
 
-static const char *cmd_labels [] = {
+static const char *op_labels [OP_MAX] = {
+	[OP_NOP]    = "-",
+	[OP_CTRL]   = "Control        (1:1)",
+	[OP_PUSH]   = "Push           (1:2)",
+	[OP_ADD]    = "Add            (2:1)",
+	[OP_SUB]    = "Sub            (2:1)",
+	[OP_MUL]    = "Mul            (2:1)",
+	[OP_DIV]    = "Div            (2:1)",
+	[OP_NEG]    = "Neg            (1:1)",
+	[OP_ABS]    = "Abs            (1:1)",
+	[OP_POW]    = "Pow            (2:1)",
+	[OP_SQRT]   = "Sqrt           (1:1)",
+	[OP_MOD]    = "Mod            (2:1)",
+	[OP_EXP]    = "Exp            (1:1)",
+	[OP_EXP_2]  = "Exp2           (1:1)",
+	[OP_EXP_10] = "Exp10          (1:1)",
+	[OP_LOG]    = "Log            (1:1)",
+	[OP_LOG_2]  = "Log2           (1:1)",
+	[OP_LOG_10] = "Log10          (1:1)",
+	[OP_SIN]    = "Sin            (1:1)",
+	[OP_COS]    = "Cos            (1:1)",
+	[OP_SWAP]   = "Swap           (2:2)",
+	[OP_FRAME]  = "Frame          (-:1)",
+	[OP_SRATE]  = "Sample Rate    (-:1)",
+	[OP_PI]     = "Pi             (-:1)",
+	[OP_EQ]     = "Equal          (2:1)",
+	[OP_LT]     = "LessThan       (2:1)",
+	[OP_GT]     = "GreaterThan    (2:1)",
+	[OP_LE]     = "LessOrEqual    (2:1)",
+	[OP_GE]     = "GreaterOrEqual (2:1)",
+	[OP_AND]    = "Boolean And    (2:1)",
+	[OP_OR]     = "Boolean Or     (2:1)",
+	[OP_NOT]    = "Boolean Not    (1:1)",
+	[OP_BAND]   = "Bitwise And    (2:1)",
+	[OP_BOR]    = "Bitwise Or     (2:1)",
+	[OP_BNOT]   = "Bitwise Not    (1:1)",
+	[OP_TER]    = "Ternary        (3:1)",
+	[OP_STORE]  = "Store          (2:0)",
+	[OP_LOAD]   = "Load           (1:1)",
+};
+
+static const char *cmd_labels [COMMAND_MAX] = {
 	[COMMAND_NOP]    = "-",
-	[COMMAND_OPCODE] = "OpCode"	,
+	[COMMAND_OPCODE] = "Op Code"	,
 	[COMMAND_BOOL]   = "Boolean"	,
 	[COMMAND_INT]    = "Integer"	,
 	[COMMAND_LONG]   = "Long"	,
@@ -229,6 +257,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 
 					const float old_val = handle->in0[i];
 					nk_property_float(ctx, label, 0.f, &handle->in0[i], 1.f, 0.01f, 0.01f);
+					nk_slider_float(ctx, 0.f, &handle->in0[i], 1.f, 0.001f);
 					if(old_val != handle->in0[i])
 						handle->writer(handle->controller, i + 2, sizeof(float), 0, &handle->in0[i]);
 				}
@@ -244,6 +273,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 					char label [16];
 					snprintf(label, 16, "Output %u", i);
 					nk_value_float(ctx, label, handle->out0[i]);
+					nk_slide_float(ctx, 0.f, handle->out0[i], 1.f, 0.001f);
 				}
 				nk_tree_pop(ctx);
 			}
@@ -251,7 +281,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 			nk_group_end(ctx);
 		}
 
-		if(nk_group_begin(ctx, "Operations", NK_WINDOW_TITLE | NK_WINDOW_BORDER))
+		if(nk_group_begin(ctx, "Program", NK_WINDOW_TITLE | NK_WINDOW_BORDER))
 		{
 			nk_layout_row_dynamic(ctx, dy, 2);
 			bool sync = false;

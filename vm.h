@@ -38,14 +38,17 @@
 #define VM__graph            VM_PREFIX"graph"
 
 #define VM__opNop            VM_PREFIX"opNop"
+#define VM__opControl        VM_PREFIX"opControl"
 #define VM__opPush           VM_PREFIX"opPush"
 #define VM__opAdd            VM_PREFIX"opAdd"
 #define VM__opSub            VM_PREFIX"opSub"
 #define VM__opMul            VM_PREFIX"opMul"
 #define VM__opDiv            VM_PREFIX"opDiv"
 #define VM__opNeg            VM_PREFIX"opNeg"
+#define VM__opAbs            VM_PREFIX"opAbs"
 #define VM__opPow            VM_PREFIX"opPow"
 #define VM__opSqrt           VM_PREFIX"opSqrt"
+#define VM__opMod            VM_PREFIX"opMod"
 #define VM__opExp            VM_PREFIX"opExp"
 #define VM__opExp2           VM_PREFIX"opExp2"
 #define VM__opExp10          VM_PREFIX"opExp10"
@@ -55,6 +58,23 @@
 #define VM__opSin            VM_PREFIX"opSin"
 #define VM__opCos            VM_PREFIX"opCos"
 #define VM__opSwap           VM_PREFIX"opSwap"
+#define VM__opFrame          VM_PREFIX"opFrame"
+#define VM__opSampleRate     VM_PREFIX"opSampleRate"
+#define VM__opPi             VM_PREFIX"opPi"
+#define VM__opEq             VM_PREFIX"opEq"
+#define VM__opLt             VM_PREFIX"opLt"
+#define VM__opGt             VM_PREFIX"opGt"
+#define VM__opLe             VM_PREFIX"opLe"
+#define VM__opGe             VM_PREFIX"opGe"
+#define VM__opAnd            VM_PREFIX"opAnd"
+#define VM__opOr             VM_PREFIX"opOr"
+#define VM__opNot            VM_PREFIX"opNot"
+#define VM__opBAnd           VM_PREFIX"opBAnd"
+#define VM__opBOr            VM_PREFIX"opBOr"
+#define VM__opBNot           VM_PREFIX"opBNot"
+#define VM__opTernary        VM_PREFIX"opTernary"
+#define VM__opStore          VM_PREFIX"opStore"
+#define VM__opLoad           VM_PREFIX"opLoad"
 
 #define MAX_NPROPS 1
 #define CTRL_MAX 8
@@ -72,14 +92,17 @@ typedef struct _plugstate_t plugstate_t;
 enum _opcode_enum_t{
 	OP_NOP = 0,
 
+	OP_CTRL,
 	OP_PUSH,
 	OP_ADD,
 	OP_SUB,
 	OP_MUL,
 	OP_DIV,
 	OP_NEG,
+	OP_ABS,
 	OP_POW,
 	OP_SQRT,
+	OP_MOD,
 	OP_EXP,
 	OP_EXP_2,
 	OP_EXP_10,
@@ -89,8 +112,25 @@ enum _opcode_enum_t{
 	OP_SIN,
 	OP_COS,
 	OP_SWAP,
+	OP_FRAME,
+	OP_SRATE,
+	OP_PI,
+	OP_EQ,
+	OP_LT,
+	OP_GT,
+	OP_LE,
+	OP_GE,
+	OP_AND,
+	OP_OR,
+	OP_NOT,
+	OP_BAND,
+	OP_BOR,
+	OP_BNOT,
+	OP_TER,
+	OP_STORE,
+	OP_LOAD,
 
-	OP_MAX
+	OP_MAX,
 };
 
 enum _command_enum_t {
@@ -103,7 +143,7 @@ enum _command_enum_t {
 	COMMAND_FLOAT,
 	COMMAND_DOUBLE,
 
-	COMMAND_MAX
+	COMMAND_MAX,
 };
 
 struct _opcode_t {
@@ -126,27 +166,52 @@ struct _plugstate_t {
 	uint8_t graph [GRAPH_SIZE];
 };
 
+static const char *opcode_uris [OP_MAX] = {
+	[OP_NOP]    = VM__opNop,
+	[OP_CTRL]   = VM__opControl,
+	[OP_PUSH]   = VM__opPush,
+	[OP_ADD]    = VM__opAdd,
+	[OP_SUB]    = VM__opSub,
+	[OP_MUL]    = VM__opMul,
+	[OP_DIV]    = VM__opDiv,
+	[OP_NEG]    = VM__opNeg,
+	[OP_ABS]    = VM__opAbs,
+	[OP_POW]    = VM__opPow,
+	[OP_SQRT]   = VM__opSqrt,
+	[OP_MOD]    = VM__opMod,
+	[OP_EXP]    = VM__opExp,
+	[OP_EXP_2]  = VM__opExp2,
+	[OP_EXP_10] = VM__opExp10,
+	[OP_LOG]    = VM__opLog,
+	[OP_LOG_2]  = VM__opLog2,
+	[OP_LOG_10] = VM__opLog10,
+	[OP_SIN]    = VM__opSin,
+	[OP_COS]    = VM__opCos,
+	[OP_SWAP]   = VM__opSwap,
+	[OP_FRAME]  = VM__opFrame,
+	[OP_SRATE]  = VM__opSampleRate,
+	[OP_PI]     = VM__opPi,
+	[OP_EQ]     = VM__opEq,
+	[OP_LT]     = VM__opLt,
+	[OP_GT]     = VM__opGt,
+	[OP_LE]     = VM__opLe,
+	[OP_GE]     = VM__opGe,
+	[OP_AND]    = VM__opAnd,
+	[OP_OR]     = VM__opOr,
+	[OP_NOT]    = VM__opNot,
+	[OP_BAND]   = VM__opBAnd,
+	[OP_BOR]    = VM__opBOr,
+	[OP_BNOT]   = VM__opBNot,
+	[OP_TER]    = VM__opTernary,
+	[OP_STORE]  = VM__opStore,
+	[OP_LOAD]   = VM__opLoad,
+};
+
 static inline void
 vm_opcode_init(opcode_t *opcode, LV2_URID_Map *map)
 {
-	opcode->op[OP_NOP]    = map->map(map->handle, VM__opNop);
-	opcode->op[OP_PUSH]   = map->map(map->handle, VM__opPush);
-	opcode->op[OP_ADD]    = map->map(map->handle, VM__opAdd);
-	opcode->op[OP_SUB]    = map->map(map->handle, VM__opSub);
-	opcode->op[OP_MUL]    = map->map(map->handle, VM__opMul);
-	opcode->op[OP_DIV]    = map->map(map->handle, VM__opDiv);
-	opcode->op[OP_NEG]    = map->map(map->handle, VM__opNeg);
-	opcode->op[OP_POW]    = map->map(map->handle, VM__opPow);
-	opcode->op[OP_SQRT]   = map->map(map->handle, VM__opSqrt);
-	opcode->op[OP_EXP]    = map->map(map->handle, VM__opExp);
-	opcode->op[OP_EXP_2]  = map->map(map->handle, VM__opExp2);
-	opcode->op[OP_EXP_10] = map->map(map->handle, VM__opExp10);
-	opcode->op[OP_LOG]    = map->map(map->handle, VM__opLog);
-	opcode->op[OP_LOG_2]  = map->map(map->handle, VM__opLog2);
-	opcode->op[OP_LOG_10] = map->map(map->handle, VM__opLog10);
-	opcode->op[OP_SIN]    = map->map(map->handle, VM__opSin);
-	opcode->op[OP_COS]    = map->map(map->handle, VM__opCos);
-	opcode->op[OP_SWAP]   = map->map(map->handle, VM__opSwap);
+	for(unsigned i = 0; i < OP_MAX; i++)
+		opcode->op[i] = map->map(map->handle, opcode_uris[i]);
 }
 
 static inline opcode_enum_t
@@ -229,12 +294,14 @@ vm_serialize(opcode_t *opcode, LV2_Atom_Forge *forge, const command_t *cmds)
 	return ref;
 }
 
-static inline void
+static inline bool
 vm_deserialize(opcode_t *opcode, LV2_Atom_Forge *forge,
 	command_t *cmds, uint32_t size, const LV2_Atom *body)
 {
 	command_t *cmd = cmds;
 	memset(cmds, 0x0, sizeof(command_t)*ITEMS_MAX);
+
+	bool is_dynamic = false;
 
 	LV2_ATOM_TUPLE_BODY_FOREACH(body, size, item)
 	{
@@ -269,6 +336,9 @@ vm_deserialize(opcode_t *opcode, LV2_Atom_Forge *forge,
 		{
 			cmd->type = COMMAND_OPCODE;
 			cmd->op = vm_opcode_unmap(opcode, ((const LV2_Atom_URID *)item)->body);
+
+			if(cmd->op == OP_FRAME)
+				is_dynamic = true;
 		}
 		else
 		{
@@ -280,6 +350,8 @@ vm_deserialize(opcode_t *opcode, LV2_Atom_Forge *forge,
 		if(cmd >= cmds + ITEMS_MAX)
 			break;
 	}
+
+	return is_dynamic;
 }
 
 #endif // _VM_LV2_H

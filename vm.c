@@ -22,19 +22,25 @@
 
 #include <vm.h>
 
-#define SLOT_MAX 64
+#define SLOT_MAX 32
+#define REG_MAX 32
 
 typedef struct _stack_t stack_t;
 typedef struct _plughandle_t plughandle_t;
 
+typedef double num_t;
+
 struct _stack_t {
-	float slots [SLOT_MAX];
+	num_t slots [SLOT_MAX];
+	num_t regs [REG_MAX];
 };
 
 struct _plughandle_t {
 	LV2_URID_Map *map;
 	LV2_Atom_Forge forge;
 	LV2_Atom_Forge_Ref ref;
+
+	LV2_URID vm_graph;
 
 	LV2_Log_Log *log;
 	LV2_Log_Logger logger;
@@ -44,8 +50,8 @@ struct _plughandle_t {
 	const float *in [CTRL_MAX];
 	float *out [CTRL_MAX];
 
-	float in0 [CTRL_MAX];
-	float out0 [CTRL_MAX];
+	num_t in0 [CTRL_MAX];
+	num_t out0 [CTRL_MAX];
 
 	PROPS_T(props, MAX_NPROPS);
 	plugstate_t state;
@@ -56,8 +62,13 @@ struct _plughandle_t {
 
 	stack_t stack;
 	bool recalc;
+	bool sync;
+	bool is_dynamic;
 
 	command_t cmds [ITEMS_MAX];
+
+	num_t srate;
+	int64_t frame;
 };
 
 static inline void
@@ -68,18 +79,18 @@ _stack_clear(stack_t *stack)
 }
 
 static inline void
-_stack_push(stack_t *stack, float val)
+_stack_push(stack_t *stack, num_t val)
 {
-	for(unsigned i = SLOT_MAX - 1; i > 0; i--)
+	for(unsigned i = SLOT_MAX - 1; i >= 1; i--)
 		stack->slots[i] = stack->slots[i - 1];
 
 	stack->slots[0] = val;
 }
 
-static inline float
+static inline num_t
 _stack_pop(stack_t *stack)
 {
-	const float val = stack->slots[0];
+	const num_t val = stack->slots[0];
 
 	for(unsigned i = 0; i < SLOT_MAX - 1; i++)
 		stack->slots[i] = stack->slots[i + 1];
@@ -90,9 +101,9 @@ _stack_pop(stack_t *stack)
 }
 
 static inline void
-_stack_push_num(stack_t *stack, const float *val, unsigned num)
+_stack_push_num(stack_t *stack, const num_t *val, unsigned num)
 {
-	for(unsigned i = SLOT_MAX - num; i > 0; i--)
+	for(unsigned i = SLOT_MAX - 1; i >= num; i--)
 		stack->slots[i] = stack->slots[i - num];
 
 	for(unsigned i = 0; i < num; i++)
@@ -100,7 +111,7 @@ _stack_push_num(stack_t *stack, const float *val, unsigned num)
 }
 
 static inline void
-_stack_pop_num(stack_t *stack, float *val, unsigned num)
+_stack_pop_num(stack_t *stack, num_t *val, unsigned num)
 {
 	for(unsigned i = 0; i < num; i++)
 		val[i] = stack->slots[i];
@@ -112,6 +123,14 @@ _stack_pop_num(stack_t *stack, float *val, unsigned num)
 		stack->slots[i] = 0.f;
 }
 
+static inline num_t
+_stack_peek(stack_t *stack)
+{
+	const num_t val = stack->slots[0];
+
+	return val;
+}
+
 static void
 _intercept_graph(void *data, LV2_Atom_Forge *forge, int64_t frames,
 	props_event_t event, props_impl_t *impl)
@@ -121,8 +140,10 @@ _intercept_graph(void *data, LV2_Atom_Forge *forge, int64_t frames,
 	handle->graph_size = impl->value.size;
 	handle->recalc = true;
 
-	vm_deserialize(&handle->opcode, &handle->forge, handle->cmds,
+	handle->is_dynamic = vm_deserialize(&handle->opcode, &handle->forge, handle->cmds,
 		impl->value.size, impl->value.body);
+
+	handle->sync = true;
 }
 
 static const props_def_t defs [MAX_NPROPS] = {
@@ -137,7 +158,7 @@ static const props_def_t defs [MAX_NPROPS] = {
 };
 
 static LV2_Handle
-instantiate(const LV2_Descriptor* descriptor, double rate,
+instantiate(const LV2_Descriptor* descriptor, num_t rate,
 	const char *bundle_path, const LV2_Feature *const *features)
 {
 	plughandle_t *handle = calloc(1, sizeof(plughandle_t));
@@ -163,6 +184,8 @@ instantiate(const LV2_Descriptor* descriptor, double rate,
 	if(handle->log)
 		lv2_log_logger_init(&handle->logger, handle->map, handle->log);
 
+	handle->vm_graph = handle->map->map(handle->map->handle, VM__graph);
+
 	lv2_atom_forge_init(&handle->forge, handle->map);
 	vm_opcode_init(&handle->opcode, handle->map);
 
@@ -181,6 +204,7 @@ instantiate(const LV2_Descriptor* descriptor, double rate,
 	}
 
 	handle->recalc = true;
+	handle->srate = rate;
 
 	return handle;
 }
@@ -240,6 +264,12 @@ run(LV2_Handle instance, uint32_t nsamples)
 		props_advance(&handle->props, &handle->forge, ev->time.frames, obj, &handle->ref);
 	}
 
+	if(handle->sync)
+	{
+		props_set(&handle->props, &handle->forge, nsamples - 1, handle->vm_graph, &handle->ref);
+		handle->sync = false;
+	}
+
 	for(unsigned i = 0; i < CTRL_MAX; i++)
 	{
 		if(handle->in0[i] != *handle->in[i])
@@ -249,7 +279,7 @@ run(LV2_Handle instance, uint32_t nsamples)
 		}
 	}
 
-	if(handle->recalc)
+	if(handle->recalc || handle->is_dynamic)
 	{
 		_stack_clear(&handle->stack);
 
@@ -262,144 +292,294 @@ run(LV2_Handle instance, uint32_t nsamples)
 			{
 				case COMMAND_BOOL:
 				{
-					const float c = cmd->i32;
+					const num_t c = cmd->i32;
 					_stack_push(&handle->stack, c);
 				} break;
 				case COMMAND_INT:	
 				{
-					const float c = cmd->i32;
+					const num_t c = cmd->i32;
 					_stack_push(&handle->stack, c);
 				} break;
 				case COMMAND_LONG:
 				{
-					const float c = cmd->i64;
+					const num_t c = cmd->i64;
 					_stack_push(&handle->stack, c);
 				} break;
 				case COMMAND_FLOAT:
 				{
-					const float c = cmd->f32;
+					const num_t c = cmd->f32;
 					_stack_push(&handle->stack, c);
 				} break;
 				case COMMAND_DOUBLE:
 				{
-					const float c = cmd->f64;
+					const num_t c = cmd->f64;
 					_stack_push(&handle->stack, c);
 				} break;
 				case COMMAND_OPCODE:
 				{
 					switch(cmd->op)
 					{
+						case OP_CTRL:
+						{
+							int idx = floor(_stack_pop(&handle->stack)); //FIXME check
+							if(idx < 0)
+								idx = 0;
+							if(idx >= CTRL_MAX)
+								idx = CTRL_MAX - 1;
+
+							const num_t c = handle->in0[idx];
+							_stack_push(&handle->stack, c);
+						} break;
 						case OP_PUSH:
 						{
-							int j = floorf(_stack_pop(&handle->stack)); //FIXME check
-							if(j < 0)
-								j = 0;
-							if(j >= CTRL_MAX)
-								j = CTRL_MAX - 1;
-
-							const float c = handle->in0[j];
+							const num_t c = _stack_peek(&handle->stack);
 							_stack_push(&handle->stack, c);
 						} break;
 						case OP_ADD:
 						{
-							float ab [2];
+							num_t ab [2];
 							_stack_pop_num(&handle->stack, ab, 2);
-							const float c = ab[0] + ab[1];
+							const num_t c = ab[1] + ab[0];
 							_stack_push(&handle->stack, c);
 						} break;
 						case OP_SUB:
 						{
-							float ab [2];
+							num_t ab [2];
 							_stack_pop_num(&handle->stack, ab, 2);
-							const float c = ab[0] - ab[1];
+							const num_t c = ab[1] - ab[0];
 							_stack_push(&handle->stack, c);
 						} break;
 						case OP_MUL:
 						{
-							float ab [2];
+							num_t ab [2];
 							_stack_pop_num(&handle->stack, ab, 2);
-							const float c = ab[0] * ab[1];
+							const num_t c = ab[1] * ab[0];
 							_stack_push(&handle->stack, c);
 						} break;
 						case OP_DIV:
 						{
-							float ab [2];
+							num_t ab [2];
 							_stack_pop_num(&handle->stack, ab, 2);
-							const float c = ab[0] / ab[1];
+							const num_t c = ab[0] == 0.0
+								? 0.0
+								: ab[1] / ab[0];
 							_stack_push(&handle->stack, c);
 						} break;
 						case OP_NEG:
 						{
-							const float a = _stack_pop(&handle->stack);
-							const float c = -a;
+							const num_t a = _stack_pop(&handle->stack);
+							const num_t c = -a;
+							_stack_push(&handle->stack, c);
+						} break;
+						case OP_ABS:
+						{
+							const num_t a = _stack_pop(&handle->stack);
+							const num_t c = fabs(a);
 							_stack_push(&handle->stack, c);
 						} break;
 						case OP_POW:
 						{
-							float ab [2];
+							num_t ab [2];
 							_stack_pop_num(&handle->stack, ab, 2);
-							const float c = pow(ab[0], ab[1]);
+							const num_t c = pow(ab[1], ab[0]);
 							_stack_push(&handle->stack, c);
 						} break;
 						case OP_SQRT:
 						{
-							const float a = _stack_pop(&handle->stack);
-							const float c = sqrtf(a);
+							const num_t a = _stack_pop(&handle->stack);
+							const num_t c = sqrt(a);
+							_stack_push(&handle->stack, c);
+						} break;
+						case OP_MOD:
+						{
+							num_t ab [2];
+							_stack_pop_num(&handle->stack, ab, 2);
+							const num_t c = ab[0] == 0.0
+								? 0.0
+								: fmod(ab[1], ab[0]);
 							_stack_push(&handle->stack, c);
 						} break;
 						case OP_EXP:
 						{
-							const float a = _stack_pop(&handle->stack);
-							const float c = expf(a);
+							const num_t a = _stack_pop(&handle->stack);
+							const num_t c = exp(a);
 							_stack_push(&handle->stack, c);
 						} break;
 						case OP_EXP_2:
 						{
-							const float a = _stack_pop(&handle->stack);
-							const float c = exp2f(a);
+							const num_t a = _stack_pop(&handle->stack);
+							const num_t c = exp2(a);
 							_stack_push(&handle->stack, c);
 						} break;
 						case OP_EXP_10:
 						{
-							const float a = _stack_pop(&handle->stack);
-							const float c = exp10f(a);
+							const num_t a = _stack_pop(&handle->stack);
+							const num_t c = exp10(a);
 							_stack_push(&handle->stack, c);
 						} break;
 						case OP_LOG:
 						{
-							const float a = _stack_pop(&handle->stack);
-							const float c = logf(a);
+							const num_t a = _stack_pop(&handle->stack);
+							const num_t c = log(a);
 							_stack_push(&handle->stack, c);
 						} break;
 						case OP_LOG_2:
 						{
-							const float a = _stack_pop(&handle->stack);
-							const float c = log2f(a);
+							const num_t a = _stack_pop(&handle->stack);
+							const num_t c = log2(a);
 							_stack_push(&handle->stack, c);
 						} break;
 						case OP_LOG_10:
 						{
-							const float a = _stack_pop(&handle->stack);
-							const float c = log10f(a);
+							const num_t a = _stack_pop(&handle->stack);
+							const num_t c = log10(a);
 							_stack_push(&handle->stack, c);
 						} break;
 						case OP_SIN:
 						{
-							const float a = _stack_pop(&handle->stack);
-							const float c = sinf(a);
+							const num_t a = _stack_pop(&handle->stack);
+							const num_t c = sin(a);
 							_stack_push(&handle->stack, c);
 						} break;
 						case OP_COS:
 						{
-							const float a = _stack_pop(&handle->stack);
-							const float c = cosf(a);
+							const num_t a = _stack_pop(&handle->stack);
+							const num_t c = cos(a);
 							_stack_push(&handle->stack, c);
 						} break;
 						case OP_SWAP:
 						{
-							float ab [2];
+							num_t ab [2];
 							_stack_pop_num(&handle->stack, ab, 2);
-							_stack_push_num(&handle->stack, ab, 2);
+							const num_t cd [2] = {ab[1], ab[0]};
+							_stack_push_num(&handle->stack, cd, 2);
+						} break;
+						case OP_FRAME:
+						{
+							num_t c = handle->frame;
+							_stack_push(&handle->stack, c);
+						} break;
+						case OP_SRATE:
+						{
+							num_t c = handle->srate;
+							_stack_push(&handle->stack, c);
+						} break;
+						case OP_PI:
+						{
+							num_t c = M_PI;
+							_stack_push(&handle->stack, c);
+						} break;
+						case OP_EQ:
+						{
+							num_t ab [2];
+							_stack_pop_num(&handle->stack, ab, 2);
+							const bool c = ab[1] == ab[0];
+							_stack_push(&handle->stack, c);
+						} break;
+						case OP_LT:
+						{
+							num_t ab [2];
+							_stack_pop_num(&handle->stack, ab, 2);
+							const bool c = ab[1] < ab[0];
+							_stack_push(&handle->stack, c);
+						} break;
+						case OP_GT:
+						{
+							num_t ab [2];
+							_stack_pop_num(&handle->stack, ab, 2);
+							const bool c = ab[1] > ab[0];
+							_stack_push(&handle->stack, c);
+						} break;
+						case OP_LE:
+						{
+							num_t ab [2];
+							_stack_pop_num(&handle->stack, ab, 2);
+							const bool c = ab[1] <= ab[0];
+							_stack_push(&handle->stack, c);
+						} break;
+						case OP_GE:
+						{
+							num_t ab [2];
+							_stack_pop_num(&handle->stack, ab, 2);
+							const bool c = ab[1] >= ab[0];
+							_stack_push(&handle->stack, c);
+						} break;
+						case OP_AND:
+						{
+							num_t ab [2];
+							_stack_pop_num(&handle->stack, ab, 2);
+							const bool c = ab[1] && ab[0];
+							_stack_push(&handle->stack, c);
+						} break;
+						case OP_OR:
+						{
+							num_t ab [2];
+							_stack_pop_num(&handle->stack, ab, 2);
+							const bool c = ab[1] || ab[0];
+							_stack_push(&handle->stack, c);
+						} break;
+						case OP_NOT:
+						{
+							const int a = _stack_pop(&handle->stack);
+							const bool c = !a;
+							_stack_push(&handle->stack, c);
+						} break;
+						case OP_BAND:
+						{
+							num_t ab [2];
+							_stack_pop_num(&handle->stack, ab, 2);
+							const unsigned a = ab[1];
+							const unsigned b = ab[0];
+							const unsigned c = a & b;
+							_stack_push(&handle->stack, c);
+						} break;
+						case OP_BOR:
+						{
+							num_t ab [2];
+							_stack_pop_num(&handle->stack, ab, 2);
+							const unsigned a = ab[1];
+							const unsigned b = ab[0];
+							const unsigned c = a | b;
+							_stack_push(&handle->stack, c);
+						} break;
+						case OP_BNOT:
+						{
+							const unsigned a = _stack_pop(&handle->stack);
+							const unsigned c = ~a;
+							_stack_push(&handle->stack, c);
+						} break;
+						case OP_TER:
+						{
+							num_t ab [3];
+							_stack_pop_num(&handle->stack, ab, 3);
+							const bool c = ab[0];
+							_stack_push(&handle->stack, c ? ab[2] : ab[1]);
+						} break;
+						case OP_STORE:
+						{
+							num_t ab [2];
+							_stack_pop_num(&handle->stack, ab, 2);
+
+							int idx = floorf(ab[0]);
+							if(idx < 0)
+								idx = 0;
+							if(idx >= REG_MAX)
+								idx = REG_MAX - 1;
+
+							handle->stack.regs[idx] = ab[1];
+						} break;
+						case OP_LOAD:
+						{
+							const num_t a = _stack_pop(&handle->stack);
+
+							int idx = floorf(a);
+							if(idx < 0)
+								idx = 0;
+							if(idx >= REG_MAX)
+								idx = REG_MAX - 1;
+
+							const num_t c = handle->stack.regs[idx];
+							_stack_push(&handle->stack, c);
 						} break;
 						case OP_NOP:
 						{
@@ -437,6 +617,8 @@ run(LV2_Handle instance, uint32_t nsamples)
 
 	for(unsigned i = 0; i < CTRL_MAX; i++)
 		*handle->out[i] = handle->out0[i];;
+
+	handle->frame += nsamples;
 }
 
 static void

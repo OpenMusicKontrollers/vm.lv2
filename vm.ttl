@@ -29,6 +29,7 @@
 @prefix patch: <http://lv2plug.in/ns/ext/patch#> .
 @prefix units: <http://lv2plug.in/ns/extensions/units#> .
 @prefix work: <http://lv2plug.in/ns/ext/worker#> .
+@prefix pset: <http://lv2plug.in/ns/ext/presets#> .
 
 @prefix lic: <http://opensource.org/licenses/> .
 @prefix omk: <http://open-music-kontrollers.ch/ventosus#> .
@@ -55,9 +56,12 @@ vm:graph
 	rdfs:label "Graph" ;
 	rdfs:comment "vm graph tuple" .
 
-vm:opPush
+vm:opControl
 	a rdfs:Class, owl:Class ;
 	rdfs:label "Push Control" .
+vm:opPush
+	a rdfs:Class, owl:Class ;
+	rdfs:label "Push Top of stack" .
 vm:opAdd
 	a rdfs:Class, owl:Class ;
 	rdfs:label "Addition" .
@@ -73,12 +77,18 @@ vm:opDiv
 vm:opNeg
 	a rdfs:Class, owl:Class ;
 	rdfs:label "Negate" .
+vm:opAbs
+	a rdfs:Class, owl:Class ;
+	rdfs:label "Absolute" .
 vm:opPow
 	a rdfs:Class, owl:Class ;
 	rdfs:label "Power" .
 vm:opSqrt
 	a rdfs:Class, owl:Class ;
 	rdfs:label "Square root" .
+vm:opMod
+	a rdfs:Class, owl:Class ;
+	rdfs:label "Modulo" .
 vm:opExp
 	a rdfs:Class, owl:Class ;
 	rdfs:label "Exponentiation" .
@@ -106,6 +116,57 @@ vm:opCos
 vm:opSwap
 	a rdfs:Class, owl:Class ;
 	rdfs:label "Swap" .
+vm:opFrame
+	a rdfs:Class, owl:Class ;
+	rdfs:label "Frame" .
+vm:opSampleRate
+	a rdfs:Class, owl:Class ;
+	rdfs:label "SampleRate" .
+vm:opPi
+	a rdfs:Class, owl:Class ;
+	rdfs:label "Pi" .
+vm:opEq
+	a rdfs:Class, owl:Class ;
+	rdfs:label "Equal" .
+vm:opLt
+	a rdfs:Class, owl:Class ;
+	rdfs:label "Less than" .
+vm:opGt
+	a rdfs:Class, owl:Class ;
+	rdfs:label "Greater than" .
+vm:opLe
+	a rdfs:Class, owl:Class ;
+	rdfs:label "Less or equal" .
+vm:opGe
+	a rdfs:Class, owl:Class ;
+	rdfs:label "Greater or equal" .
+vm:opAnd
+	a rdfs:Class, owl:Class ;
+	rdfs:label "Boolean And" .
+vm:opOr
+	a rdfs:Class, owl:Class ;
+	rdfs:label "Boolean Or" .
+vm:opNot
+	a rdfs:Class, owl:Class ;
+	rdfs:label "Boolean Not" .
+vm:opBAnd
+	a rdfs:Class, owl:Class ;
+	rdfs:label "Bitwise And" .
+vm:opBOr
+	a rdfs:Class, owl:Class ;
+	rdfs:label "Bitwise Or" .
+vm:opBNot
+	a rdfs:Class, owl:Class ;
+	rdfs:label "Bitwise Not" .
+vm:opTernary
+	a rdfs:Class, owl:Class ;
+	rdfs:label "Ternary" .
+vm:opStore
+	a rdfs:Class, owl:Class ;
+	rdfs:label "Store in registry" .
+vm:opLoad
+	a rdfs:Class, owl:Class ;
+	rdfs:label "Load from registry" .
 
 # Plugin
 vm:vm
@@ -286,9 +347,85 @@ vm:vm
 		vm:graph [
 			a atom:Tuple ;
 			rdf:value (
-				0   vm:opPush
+				7 vm:opControl
+				6 vm:opControl
+				5 vm:opControl
+				4 vm:opControl
+				3 vm:opControl
+				2 vm:opControl
+				1 vm:opControl
+				0 vm:opControl
+			)
+		]
+	] .
+
+vm:dBFS
+	a pset:Preset ;
+		lv2:appliesTo vm:vm ;
+		rdfs:label "dBFS" ;
+
+	state:state [
+		vm:graph [
+			a atom:Tuple ;
+			rdf:value (
+				# dBFS := Log10( |Control0| ) * 20.0
+				0 vm:opControl
+				vm:opAbs
+				vm:opLog10
+				20.0 vm:opMul
+			)
+		]
+	] .
+
+vm:lfo
+	a pset:Preset ;
+		lv2:appliesTo vm:vm ;
+		rdfs:label "LFO" ;
+
+	state:state [
+		vm:graph [
+			a atom:Tuple ;
+			rdf:value (
+				# Phase := (Frame % (SampleRate * Control0) ) / (SampleRate * Control0)
+				vm:opSampleRate
+				0 vm:opControl
+				vm:opMul
+				vm:opPush
+				vm:opFrame
+				vm:opSwap
+				vm:opMod
+				vm:opSwap
+				vm:opDiv
+				0 vm:opStore
+
+				# SquareLFO := (Phase > 0.25) && (Phase < 0.75)
+				0 vm:opLoad
+				0.25 vm:opGt
+				0 vm:opLoad
+				0.75 vm:opLt
+				vm:opAnd
+
+				# TriangleLFO := (Phase > 0.5 ? (1.0 - Phase) : Phase) * 2.0
+				1.0
+				0 vm:opLoad
+				vm:opSub
+				0 vm:opLoad
+				vm:opPush
+				0.5 vm:opGt
+				vm:opTernary
+				2.0 vm:opMul
+
+				# SineLFO := Sin( (Phase - 0.25) * 2.0 * PI) * 0.5 + 0.5
+				0 vm:opLoad
+				0.25 vm:opSub
+				2.0 vm:opMul
+				vm:opPi vm:opMul
+				vm:opSin
 				0.5 vm:opMul
 				0.5 vm:opAdd
+
+				# push phase
+				0 vm:opLoad
 			)
 		]
 	] .
