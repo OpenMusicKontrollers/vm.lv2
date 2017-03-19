@@ -15,7 +15,7 @@
 
 ### Build / install
 
-	git clone https://github.com/OpenMusicKontrollers/vm.lv2.git
+	git clone https://gitlab.com/OpenMusicKontrollers/vm.lv2.git
 	cd vm.lv2
 	mkdir build
 	cd build
