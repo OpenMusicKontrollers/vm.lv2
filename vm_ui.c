@@ -249,6 +249,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 {
 	plughandle_t *handle = data;
 
+	handle->dy = 20.f * nk_pugl_get_scale(&handle->win);
 	const float dy = handle->dy;
 
 	if(nk_begin(ctx, "Vm", wbounds, NK_WINDOW_NO_SCROLLBAR))
@@ -481,36 +482,24 @@ instantiate(const LV2UI_Descriptor *descriptor, const char *plugin_uri,
 	handle->controller = controller;
 	handle->writer = write_function;
 
-	const char *NK_SCALE = getenv("NK_SCALE");
-	const float scale = NK_SCALE ? atof(NK_SCALE) : 1.f;
-	handle->dy = 20.f * scale;
-
 	nk_pugl_config_t *cfg = &handle->win.cfg;
-	cfg->width = 720 * scale;
-	cfg->height = 720 * scale;
+	cfg->width = 720;
+	cfg->height = 720;
 	cfg->resizable = true;
 	cfg->ignore = false;
 	cfg->class = "vm";
 	cfg->title = "Vm";
 	cfg->parent = (intptr_t)parent;
+	cfg->host_resize = host_resize;
 	cfg->data = handle;
 	cfg->expose = _expose;
 
-	char *path;
-	if(asprintf(&path, "%sCousine-Regular.ttf", bundle_path) == -1)
-		path = NULL;
-
-	cfg->font.face = path;
-	cfg->font.size = 13 * scale;
+	if(asprintf(&cfg->font.face, "%sCousine-Regular.ttf", bundle_path) == -1)
+		cfg->font.face = NULL;
+	cfg->font.size = 13;
 	
 	*(intptr_t *)widget = nk_pugl_init(&handle->win);
 	nk_pugl_show(&handle->win);
-
-	if(path)
-		free(path);
-
-	if(host_resize)
-		host_resize->ui_resize(host_resize->handle, cfg->width, cfg->height);
 
 	atom_ser_t *ser = &handle->ser;
 	ser->size = 1024;
@@ -526,6 +515,8 @@ cleanup(LV2UI_Handle instance)
 {
 	plughandle_t *handle = instance;
 
+	if(handle->win.cfg.font.face)
+		free(handle->win.cfg.font.face);
 	nk_pugl_hide(&handle->win);
 	nk_pugl_shutdown(&handle->win);
 
