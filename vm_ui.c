@@ -244,6 +244,9 @@ _draw_separator(struct nk_context *ctx, float line_width)
 	nk_stroke_line(canvas, x0, y, x1, y, line_width, ctx->style.window.background);
 }
 
+#define VM_MIN -0x2000
+#define VM_MAX 0x1fff
+
 static void
 _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 {
@@ -272,8 +275,8 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 					snprintf(label, 16, "Input %u:", i);
 
 					const float old_val = handle->in0[i];
-					nk_property_float(ctx, label, 0.f, &handle->in0[i], 1.f, 0.01f, 0.01f);
-					nk_slider_float(ctx, 0.f, &handle->in0[i], 1.f, 0.001f);
+					nk_property_float(ctx, label, VM_MIN, &handle->in0[i], VM_MAX, 1.f, 1.f);
+					nk_slider_float(ctx, VM_MIN, &handle->in0[i], VM_MAX, 1.f);
 					if(old_val != handle->in0[i])
 						handle->writer(handle->controller, i + 2, sizeof(float), 0, &handle->in0[i]);
 				}
@@ -289,7 +292,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 					char label [16];
 					snprintf(label, 16, "Output %u", i);
 					nk_value_float(ctx, label, handle->out0[i]);
-					nk_slide_float(ctx, 0.f, handle->out0[i], 1.f, 0.001f);
+					nk_slide_float(ctx, VM_MIN, handle->out0[i], VM_MAX, 1.f);
 				}
 				nk_tree_pop(ctx);
 			}
@@ -321,16 +324,18 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 				{
 					case COMMAND_BOOL:
 					{
-						/*FIXME
-						const int32_t c = ((const LV2_Atom_Bool *)item)->body;
-						nk_labelf(ctx, NK_TEXT_LEFT, "%s", c ? "true" : "false");
-						*/
-						nk_spacing(ctx, 1);
+						if(nk_button_symbol_label(ctx,
+							cmd->i32 ? NK_SYMBOL_CIRCLE_SOLID : NK_SYMBOL_CIRCLE_OUTLINE,
+							cmd->i32 ? "true" : "false", NK_TEXT_LEFT))
+						{
+							cmd->i32 = !cmd->i32;
+							sync = true;
+						}
 					} break;
 					case COMMAND_INT:
 					{
 						int i32 = cmd->i32;
-						nk_property_int(ctx, "#", 0, &i32, CTRL_MAX - 1, 1, 0.01f); //FIXME
+						nk_property_int(ctx, "#", VM_MIN, &i32, VM_MAX, 1, 1.f);
 						if(i32 != cmd->i32)
 						{
 							cmd->i32 = i32;
@@ -340,7 +345,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 					case COMMAND_LONG:
 					{
 						int i64 = cmd->i64;
-						nk_property_int(ctx, "#", 0, &i64, CTRL_MAX - 1, 1, 0.01f); //FIXME
+						nk_property_int(ctx, "#", VM_MIN, &i64, VM_MAX, 1, 1.f);
 						if(i64 != cmd->i64)
 						{
 							cmd->i64 = i64;
@@ -350,7 +355,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 					case COMMAND_FLOAT:
 					{
 						float f32 = cmd->f32;
-						nk_property_float(ctx, "#", 0.f, &f32, 1.f, 0.01f, 0.01f);
+						nk_property_float(ctx, "#", VM_MIN, &f32, VM_MAX, 1.f, 1.f);
 						if(f32 != cmd->f32)
 						{
 							cmd->f32 = f32;
@@ -360,7 +365,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 					case COMMAND_DOUBLE:
 					{
 						double f64 = cmd->f64;
-						nk_property_double(ctx, "#", 0.f, &f64, 1.f, 0.01f, 0.01f);
+						nk_property_double(ctx, "#", VM_MIN, &f64, VM_MAX, 1.f, 1.f);
 						if(f64 != cmd->f64)
 						{
 							cmd->f64 = f64;
