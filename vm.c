@@ -22,8 +22,11 @@
 
 #include <vm.h>
 
-#define SLOT_MAX 32
-#define REG_MAX 32
+#define SLOT_MAX  0x20
+#define SLOT_MASK (SLOT_MAX - 1)
+
+#define REG_MAX   0x20
+#define REG_MASK  (REG_MAX - 1)
 
 typedef struct _vm_stack_t vm_stack_t;
 typedef struct _plughandle_t plughandle_t;
@@ -33,6 +36,7 @@ typedef double num_t;
 struct _vm_stack_t {
 	num_t slots [SLOT_MAX];
 	num_t regs [REG_MAX];
+	int ptr;
 };
 
 struct _plughandle_t {
@@ -74,61 +78,50 @@ struct _plughandle_t {
 static inline void
 _stack_clear(vm_stack_t *stack)
 {
-	for(unsigned i = 0; i < SLOT_MAX; i++)
-		stack->slots[i] = 0.f;
+	memset(stack->slots, 0x0, SLOT_MAX * sizeof(num_t));
+	stack->ptr = 0;
 }
 
 static inline void
 _stack_push(vm_stack_t *stack, num_t val)
 {
-	for(unsigned i = SLOT_MAX - 1; i >= 1; i--)
-		stack->slots[i] = stack->slots[i - 1];
+	stack->ptr = (stack->ptr - 1) & SLOT_MASK;
 
-	stack->slots[0] = val;
+	stack->slots[stack->ptr] = val;
 }
 
 static inline num_t
 _stack_pop(vm_stack_t *stack)
 {
-	const num_t val = stack->slots[0];
+	const num_t val = stack->slots[stack->ptr];
 
-	for(unsigned i = 0; i < SLOT_MAX - 1; i++)
-		stack->slots[i] = stack->slots[i + 1];
-
-	stack->slots[SLOT_MAX - 1] = 0.f;
+	stack->ptr = (stack->ptr + 1) & SLOT_MASK;
 
 	return val;
 }
 
 static inline void
-_stack_push_num(vm_stack_t *stack, const num_t *val, unsigned num)
+_stack_push_num(vm_stack_t *stack, const num_t *val, int num)
 {
-	for(unsigned i = SLOT_MAX - 1; i >= num; i--)
-		stack->slots[i] = stack->slots[i - num];
+	for(int i = 0; i < num; i++)
+		stack->slots[(stack->ptr - i - 1) & SLOT_MASK] = val[i];
 
-	for(unsigned i = 0; i < num; i++)
-		stack->slots[i] = val[i];
+	stack->ptr = (stack->ptr - num) & SLOT_MASK;
 }
 
 static inline void
-_stack_pop_num(vm_stack_t *stack, num_t *val, unsigned num)
+_stack_pop_num(vm_stack_t *stack, num_t *val, int num)
 {
-	for(unsigned i = 0; i < num; i++)
-		val[i] = stack->slots[i];
+	for(int i = 0; i < num; i++)
+		val[i] = stack->slots[(stack->ptr + i) & SLOT_MASK];
 
-	for(unsigned i = 0; i < SLOT_MAX - num; i++)
-		stack->slots[i] = stack->slots[i + num];
-
-	for(unsigned i = SLOT_MAX - 1 - num; i < SLOT_MAX - 1; i++)
-		stack->slots[i] = 0.f;
+	stack->ptr = (stack->ptr + num) & SLOT_MASK;
 }
 
 static inline num_t
 _stack_peek(vm_stack_t *stack)
 {
-	const num_t val = stack->slots[0];
-
-	return val;
+	return stack->slots[stack->ptr];
 }
 
 static void
@@ -321,13 +314,8 @@ run(LV2_Handle instance, uint32_t nsamples)
 					{
 						case OP_CTRL:
 						{
-							int idx = floor(_stack_pop(&handle->stack)); //FIXME check
-							if(idx < 0)
-								idx = 0;
-							if(idx >= CTRL_MAX)
-								idx = CTRL_MAX - 1;
-
-							const num_t c = handle->in0[idx];
+							const int idx = floor(_stack_pop(&handle->stack));
+							const num_t c = handle->in0[idx & CTRL_MASK];
 							_stack_push(&handle->stack, c);
 						} break;
 						case OP_PUSH:
@@ -445,8 +433,7 @@ run(LV2_Handle instance, uint32_t nsamples)
 						{
 							num_t ab [2];
 							_stack_pop_num(&handle->stack, ab, 2);
-							const num_t cd [2] = {ab[1], ab[0]};
-							_stack_push_num(&handle->stack, cd, 2);
+							_stack_push_num(&handle->stack, ab, 2);
 						} break;
 						case OP_FRAME:
 						{
@@ -553,26 +540,14 @@ run(LV2_Handle instance, uint32_t nsamples)
 						{
 							num_t ab [2];
 							_stack_pop_num(&handle->stack, ab, 2);
-
-							int idx = floorf(ab[0]);
-							if(idx < 0)
-								idx = 0;
-							if(idx >= REG_MAX)
-								idx = REG_MAX - 1;
-
-							handle->stack.regs[idx] = ab[1];
+							const int idx = floorf(ab[0]);
+							handle->stack.regs[idx & REG_MASK] = ab[1];
 						} break;
 						case OP_LOAD:
 						{
 							const num_t a = _stack_pop(&handle->stack);
-
-							int idx = floorf(a);
-							if(idx < 0)
-								idx = 0;
-							if(idx >= REG_MAX)
-								idx = REG_MAX - 1;
-
-							const num_t c = handle->stack.regs[idx];
+							const int idx = floorf(a);
+							const num_t c = handle->stack.regs[idx & REG_MASK];
 							_stack_push(&handle->stack, c);
 						} break;
 						case OP_NOP:

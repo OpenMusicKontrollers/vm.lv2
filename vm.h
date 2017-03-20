@@ -76,8 +76,9 @@
 #define VM__opLoad           VM_PREFIX"opLoad"
 
 #define MAX_NPROPS 1
-#define CTRL_MAX 8
-#define ITEMS_MAX 128
+#define CTRL_MAX   0x8
+#define CTRL_MASK  (CTRL_MAX - 1)
+#define ITEMS_MAX  128
 #define GRAPH_SIZE (ITEMS_MAX * sizeof(LV2_Atom_Long))
 
 #include <props.lv2/props.h>
