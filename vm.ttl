@@ -187,7 +187,7 @@ vm:vm
 		lv2:symbol "control" ;
 		lv2:name "Control" ;
 		lv2:designation lv2:control ;
-		rsz:minimumSize 65536 ;
+		rsz:minimumSize 4096;
 	] , [
 	  a lv2:OutputPort ,
 			atom:AtomPort ;
@@ -198,7 +198,7 @@ vm:vm
 		lv2:symbol "notify" ;
 		lv2:name "Notify" ;
 		lv2:designation lv2:control ;
-		rsz:minimumSize 65536 ;
+		rsz:minimumSize 4096 ;
 	] , [
 	  a lv2:InputPort,
 			lv2:ControlPort;
