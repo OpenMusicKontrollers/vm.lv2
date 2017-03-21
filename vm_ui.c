@@ -85,6 +85,8 @@ struct _plughandle_t {
 	plot_t inp [CTRL_MAX];
 	plot_t outp [CTRL_MAX];
 
+	float sample_rate;
+
 	command_t cmds [ITEMS_MAX];
 };
 
@@ -430,6 +432,7 @@ instantiate(const LV2UI_Descriptor *descriptor, const char *plugin_uri,
 
 	void *parent = NULL;
 	LV2UI_Resize *host_resize = NULL;
+	LV2_Options_Option *opts = NULL;
 	for(int i=0; features[i]; i++)
 	{
 		if(!strcmp(features[i]->URI, LV2_UI__parent))
@@ -442,6 +445,8 @@ instantiate(const LV2UI_Descriptor *descriptor, const char *plugin_uri,
 			handle->unmap = features[i]->data;
 		else if(!strcmp(features[i]->URI, LV2_LOG__log))
 			handle->log = features[i]->data;
+		else if(!strcmp(features[i]->URI, LV2_OPTIONS__options))
+			opts = features[i]->data;
 	}
 
 	if(!parent)
@@ -463,6 +468,20 @@ instantiate(const LV2UI_Descriptor *descriptor, const char *plugin_uri,
 		lv2_log_logger_init(&handle->logger, handle->map, handle->log);
 
 	lv2_atom_forge_init(&handle->forge, handle->map);
+
+	const LV2_URID param_sampleRate = handle->map->map(handle->map->handle, LV2_PARAMETERS__sampleRate);
+	if(opts)
+	{
+		for(LV2_Options_Option *opt = opts;
+			(opt->key != 0) && (opt->value != NULL);
+			opt++)
+		{
+			if( (opt->key == param_sampleRate) && (opt->type == handle->forge.Float) )
+				handle->sample_rate = *(const float *)opt->value;
+		}
+	}
+	if(!handle->sample_rate)
+		handle->sample_rate = 48000.f; // fall-back
 
 	vm_api_init(handle->api, handle->map);
 
@@ -552,9 +571,8 @@ port_event(LV2UI_Handle instance, uint32_t index, uint32_t size,
 					const int64_t dt = off->body - handle->off;
 					handle->off = off->body;
 
-					const float rate = 48000.f / dt; //FIXME
 					const unsigned ntimes = 4; //FIXME
-					const unsigned window = ceilf(PLOT_MAX / rate / ntimes);
+					const unsigned window = ceilf(PLOT_MAX / handle->sample_rate / ntimes);
 					const unsigned remainder = PLOT_MAX - window;
 
 					float mem [PLOT_MAX];

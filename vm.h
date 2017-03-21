@@ -27,6 +27,8 @@
 #include "lv2/lv2plug.in/ns/ext/midi/midi.h"
 #include "lv2/lv2plug.in/ns/ext/state/state.h"
 #include "lv2/lv2plug.in/ns/ext/time/time.h"
+#include "lv2/lv2plug.in/ns/ext/options/options.h"
+#include "lv2/lv2plug.in/ns/ext/parameters/parameters.h"
 #include "lv2/lv2plug.in/ns/extensions/ui/ui.h"
 #include "lv2/lv2plug.in/ns/lv2core/lv2.h"
 
@@ -106,6 +108,7 @@ enum _opcode_enum_t{
 	OP_TER,
 	OP_STORE,
 	OP_LOAD,
+	OP_RAND,
 	OP_BAR_BEAT,
 	OP_BAR,
 	OP_BEAT,
@@ -418,6 +421,13 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.npops  = 1,
 		.npushs = 1
 	},
+	[OP_RAND]  = {
+		.uri    = VM_PREFIX"opRand",
+		.label  = "Random number",
+		.mnemo  = "rand",
+		.npops  = 0,
+		.npushs = 1
+	},
 	[OP_BAR_BEAT]  = {
 		.uri    = LV2_TIME__barBeat,
 		.label  = "time:barBeat",
@@ -579,7 +589,7 @@ vm_deserialize(vm_api_impl_t *impl, LV2_Atom_Forge *forge,
 	command_t *cmd = cmds;
 	memset(cmds, 0x0, sizeof(command_t)*ITEMS_MAX);
 
-	bool uses_time = false;
+	bool is_dynamic = false;
 
 	LV2_ATOM_TUPLE_BODY_FOREACH(body, size, item)
 	{
@@ -622,10 +632,11 @@ vm_deserialize(vm_api_impl_t *impl, LV2_Atom_Forge *forge,
 				|| (cmd->op == OP_BPB)
 				|| (cmd->op == OP_BPM)
 				|| (cmd->op == OP_FRAME)
-				|| (cmd->op == OP_FPS)
-				|| (cmd->op == OP_SPEED) )
+				//|| (cmd->op == OP_FPS) // is constant
+				|| (cmd->op == OP_SPEED)
+				|| (cmd->op == OP_RAND) )
 			{
-				uses_time = true;
+				is_dynamic = true;
 			}
 		}
 		else
@@ -639,7 +650,7 @@ vm_deserialize(vm_api_impl_t *impl, LV2_Atom_Forge *forge,
 			break;
 	}
 
-	return uses_time;
+	return is_dynamic;
 }
 
 #endif // _VM_LV2_H

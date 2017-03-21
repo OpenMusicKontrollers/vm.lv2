@@ -67,7 +67,7 @@ struct _plughandle_t {
 	vm_stack_t stack;
 	bool needs_recalc;
 	bool needs_sync;
-	bool uses_time;
+	bool is_dynamic;
 
 	int64_t off;
 
@@ -134,7 +134,7 @@ _intercept_graph(void *data, LV2_Atom_Forge *forge, int64_t frames,
 	handle->graph_size = impl->value.size;
 	handle->needs_recalc = true;
 
-	handle->uses_time = vm_deserialize(handle->api, &handle->forge, handle->cmds,
+	handle->is_dynamic = vm_deserialize(handle->api, &handle->forge, handle->cmds,
 		impl->value.size, impl->value.body);
 
 	handle->needs_sync = true;
@@ -157,7 +157,7 @@ _cb(timely_t *timely, int64_t frames, LV2_URID type, void *data)
 {
 	plughandle_t *handle = data;
 
-	if(handle->uses_time)
+	if(handle->is_dynamic)
 		handle->needs_recalc = true;
 }
 
@@ -581,6 +581,11 @@ run(LV2_Handle instance, uint32_t nsamples)
 							const num_t a = _stack_pop(&handle->stack);
 							const int idx = floorf(a);
 							const num_t c = handle->stack.regs[idx & REG_MASK];
+							_stack_push(&handle->stack, c);
+						} break;
+						case OP_RAND:
+						{
+							const num_t c = (num_t)rand() / RAND_MAX;
 							_stack_push(&handle->stack, c);
 						} break;
 
