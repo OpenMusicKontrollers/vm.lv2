@@ -69,6 +69,8 @@ struct _plughandle_t {
 	bool needs_sync;
 	bool uses_time;
 
+	int64_t off;
+
 	command_t cmds [ITEMS_MAX];
 
 	timely_t timely;
@@ -661,13 +663,38 @@ run(LV2_Handle instance, uint32_t nsamples)
 		handle->needs_recalc = false;
 	}
 
+	//FIXME handle also inputs
+	for(unsigned i = 0; i < CTRL_MAX; i++)
+	{
+		if(*handle->out[i] != handle->out0[i])
+		{
+			*handle->out[i] = handle->out0[i];;
+
+			LV2_Atom_Forge_Frame tup_frame;
+			if(handle->ref)
+				handle->ref = lv2_atom_forge_frame_time(&handle->forge, nsamples - 1);
+			if(handle->ref)
+				handle->ref = lv2_atom_forge_tuple(&handle->forge, &tup_frame);
+			if(handle->ref)
+				handle->ref = lv2_atom_forge_int(&handle->forge, i + 10);
+			if(handle->ref)
+				handle->ref = lv2_atom_forge_float(&handle->forge, handle->out0[i]);
+			if(handle->ref)
+				lv2_atom_forge_pop(&handle->forge, &tup_frame);
+		}
+	}
+
+	if(handle->ref)
+		handle->ref = lv2_atom_forge_frame_time(&handle->forge, nsamples - 1);
+	if(handle->ref)
+		handle->ref = lv2_atom_forge_long(&handle->forge, handle->off);
+
 	if(handle->ref)
 		lv2_atom_forge_pop(&handle->forge, &frame);
 	else
 		lv2_atom_sequence_clear(handle->notify);
 
-	for(unsigned i = 0; i < CTRL_MAX; i++)
-		*handle->out[i] = handle->out0[i];;
+	handle->off += nsamples;
 }
 
 static void

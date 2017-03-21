@@ -31,7 +31,10 @@
 #	undef Bool
 #endif
 
+#define PLOT_MAX 256
+
 typedef struct _atom_ser_t atom_ser_t;
+typedef struct _plot_t plot_t;
 typedef struct _plughandle_t plughandle_t;
 
 struct _atom_ser_t {
@@ -42,6 +45,10 @@ struct _atom_ser_t {
 		const LV2_Atom_Event *ev;
 		uint8_t *buf;
 	};
+};
+
+struct _plot_t {
+	float vals [PLOT_MAX];
 };
 
 struct _plughandle_t {
@@ -74,15 +81,22 @@ struct _plughandle_t {
 	float in0 [CTRL_MAX];
 	float out0 [CTRL_MAX];
 
+	int64_t off;
+	plot_t inp [CTRL_MAX];
+	plot_t outp [CTRL_MAX];
+
 	command_t cmds [ITEMS_MAX];
 };
 
-typedef struct _desc_t desc_t;
-
-struct _desc_t {
-	const char *label;
-	unsigned npush;
-	unsigned npop;
+static const char *input_labels [CTRL_MAX] = {
+	"Input 0:",
+	"Input 1:",
+	"Input 2:",
+	"Input 3:",
+	"Input 4:",
+	"Input 5:",
+	"Input 6:",
+	"Input 7:",
 };
 
 static void
@@ -176,26 +190,45 @@ _set_property(plughandle_t *handle, LV2_URID property)
 		handle->atom_eventTransfer, atom);
 }
 
-static bool
-_tooltip_visible(struct nk_context *ctx)
-{
-	return nk_widget_has_mouse_click_down(ctx, NK_BUTTON_RIGHT, nk_true)
-		|| (nk_widget_is_hovered(ctx) && nk_input_is_key_down(&ctx->input, NK_KEY_CTRL));
-}
-
-static inline void
-_draw_separator(struct nk_context *ctx, float line_width)
-{
-	const struct nk_rect b = nk_widget_bounds(ctx);
-	const float x0 = b.x;
-	const float x1 = b.x + b.w;
-	const float y = b.y + b.h;
-	struct nk_command_buffer *canvas = nk_window_get_canvas(ctx);
-	nk_stroke_line(canvas, x0, y, x1, y, line_width, ctx->style.window.background);
-}
-
 #define VM_MIN -0x2000
 #define VM_MAX 0x1fff
+#define VM_RNG (VM_MAX - VM_MIN)
+#define VM_VIS (VM_RNG * 1.1f)
+
+static inline void
+_draw_plot(struct nk_context *ctx, const float *vals, unsigned nvals)
+{
+	struct nk_command_buffer *canvas = nk_window_get_canvas(ctx);
+
+	struct nk_rect bounds;
+	const nk_flags states = nk_widget(&bounds, ctx);
+	if(states != NK_WIDGET_INVALID)
+	{
+    const struct nk_rect old_clip = canvas->clip;
+
+		const struct nk_rect outer = nk_pad_rect(bounds, nk_vec2(-2.f, -2.f));
+		nk_push_scissor(canvas, outer);
+		nk_fill_rect(canvas, bounds, 0.f, nk_rgb(0x22, 0x22, 0x22));
+		nk_stroke_rect(canvas, bounds, 0.f, 1.f, ctx->style.window.border_color);
+
+		float mem [PLOT_MAX*2];
+		for(unsigned i = 0; i < nvals; i++)
+		{
+			const float sx = (float)i / nvals;
+			const float sy = vals[i] / VM_VIS;
+
+			const float x1 = bounds.x + sx*bounds.w;
+			const float y1 = bounds.y + (0.5f - sy)*bounds.h;
+
+			const unsigned i2 = i*2;
+			mem[i2 + 0] = x1;
+			mem[i2 + 1] = y1;
+		}
+
+		nk_stroke_polyline(canvas, mem, PLOT_MAX, 1.f, nk_rgb(0xcc, 0xcc, 0xcc));
+		nk_push_scissor(canvas, old_clip);
+	}
+}
 
 static void
 _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
@@ -213,38 +246,22 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 		const float wh = wbounds.h
 			- 2*ctx->style.window.padding.y
 			- 2*ctx->style.window.border;
-		nk_layout_row_dynamic(ctx, wh, 2);
 
-		if(nk_group_begin(ctx, "Controls", NK_WINDOW_TITLE | NK_WINDOW_BORDER))
+		const float ratio [3] = {0.25f, 0.5f, 0.25f};
+		nk_layout_row(ctx, NK_DYNAMIC, wh, 3, ratio);
+
+		if(nk_group_begin(ctx, "Inputs", NK_WINDOW_TITLE | NK_WINDOW_BORDER))
 		{
-			if(nk_tree_push(ctx, NK_TREE_NODE, "Inputs", NK_MAXIMIZED))
+			for(unsigned i = 0; i < CTRL_MAX; i++)
 			{
-				for(unsigned i = 0; i < CTRL_MAX; i++)
-				{
-					char label [16];
-					snprintf(label, 16, "Input %u:", i);
+				nk_layout_row_dynamic(ctx, dy*4, 1);
+				_draw_plot(ctx, handle->inp[i].vals, PLOT_MAX);
 
-					const float old_val = handle->in0[i];
-					nk_property_float(ctx, label, VM_MIN, &handle->in0[i], VM_MAX, 1.f, 1.f);
-					nk_slider_float(ctx, VM_MIN, &handle->in0[i], VM_MAX, 1.f);
-					if(old_val != handle->in0[i])
-						handle->writer(handle->controller, i + 2, sizeof(float), 0, &handle->in0[i]);
-				}
-				nk_tree_pop(ctx);
-			}
-
-			nk_spacing(ctx, 1);
-
-			if(nk_tree_push(ctx, NK_TREE_NODE, "Outputs", NK_MAXIMIZED))
-			{
-				for(unsigned i = 0; i < CTRL_MAX; i++)
-				{
-					char label [16];
-					snprintf(label, 16, "Output %u", i);
-					nk_value_float(ctx, label, handle->out0[i]);
-					nk_slide_float(ctx, VM_MIN, handle->out0[i], VM_MAX, 1.f);
-				}
-				nk_tree_pop(ctx);
+				nk_layout_row_dynamic(ctx, dy, 1);
+				const float old_val = handle->in0[i];
+				nk_property_float(ctx, input_labels[i], VM_MIN, &handle->in0[i], VM_MAX, 1.f, 1.f);
+				if(old_val != handle->in0[i])
+					handle->writer(handle->controller, i + 2, sizeof(float), 0, &handle->in0[i]);
 			}
 
 			nk_group_end(ctx);
@@ -382,6 +399,20 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 
 			nk_group_end(ctx);
 		}
+
+		if(nk_group_begin(ctx, "Outputs", NK_WINDOW_TITLE | NK_WINDOW_BORDER))
+		{
+			for(unsigned i = 0; i < CTRL_MAX; i++)
+			{
+				nk_layout_row_dynamic(ctx, dy*4, 1);
+				_draw_plot(ctx, handle->outp[i].vals, PLOT_MAX);
+
+				nk_layout_row_dynamic(ctx, dy, 1);
+				nk_labelf(ctx, NK_TEXT_LEFT, "Output %u: %+f", i, handle->out0[i]);
+			}
+
+			nk_group_end(ctx);
+		}
 	}
 
 	nk_end(ctx);
@@ -512,49 +543,79 @@ port_event(LV2UI_Handle instance, uint32_t index, uint32_t size,
 		{
 			if(protocol == handle->atom_eventTransfer)
 			{
-				const LV2_Atom_Object *obj = buf;
+				const LV2_Atom *atom = buf;
 
-				atom_ser_t *ser = &handle->ser;
-				ser->offset = 0;
-				lv2_atom_forge_set_sink(&handle->forge, _sink, _deref, ser);
-
-				LV2_Atom_Forge_Ref ref;
-				if(props_advance(&handle->props, &handle->forge, 0, obj, &ref))
+				if(atom->type == handle->forge.Long)
 				{
-					nk_pugl_post_redisplay(&handle->win);
+					const LV2_Atom_Long *off = buf;
+
+					const int64_t dt = off->body - handle->off;
+					handle->off = off->body;
+
+					const float rate = 48000.f / dt; //FIXME
+					const unsigned ntimes = 4; //FIXME
+					const unsigned window = ceilf(PLOT_MAX / rate / ntimes);
+					const unsigned remainder = PLOT_MAX - window;
+
+					float mem [PLOT_MAX];
+					bool needs_refresh = false;
+
+					for(unsigned i = 0; i < CTRL_MAX; i++)
+					{
+						// inputs
+						{
+							memcpy(mem, &handle->inp[i].vals[window], sizeof(float)*remainder);
+							for(unsigned j = remainder; j < PLOT_MAX; j++)
+								mem[j] = handle->in0[i];
+
+							//FIXME can be made more efficient
+							if(memcmp(handle->inp[i].vals, mem, sizeof(float)*PLOT_MAX))
+								needs_refresh = true;
+
+							memcpy(handle->inp[i].vals, mem, sizeof(float)*PLOT_MAX);
+						}
+
+						// outputs
+						{
+							memcpy(mem, &handle->outp[i].vals[window], sizeof(float)*remainder);
+							for(unsigned j = remainder; j < PLOT_MAX; j++)
+								mem[j] = handle->out0[i];
+
+							//FIXME can be made more efficient
+							if(memcmp(handle->outp[i].vals, mem, sizeof(float)*PLOT_MAX))
+								needs_refresh = true;
+
+							memcpy(handle->outp[i].vals, mem, sizeof(float)*PLOT_MAX);
+						}
+					}
+
+					if(needs_refresh)
+						nk_pugl_post_redisplay(&handle->win);
 				}
-			}
-		} break;
+				else if(atom->type == handle->forge.Tuple)
+				{
+					const LV2_Atom_Int *idx = buf + 8;
+					const LV2_Atom_Float *val = buf + 8 + 16;
 
-		case 2:
-		case 3:
-		case 4:
-		case 5:
-		case 6:
-		case 7:
-		case 8:
-		case 9:
-		{
-			if(protocol == 0)
-			{
-				handle->in0[index - 2] = *(const float *)buf;
-				nk_pugl_post_redisplay(&handle->win);
-			}
-		} break;
+					if(idx->body < 10)
+						handle->in0[idx->body - 2] = val->body;
+					else
+						handle->out0[idx->body - 10] = val->body;
+				}
+				else // !tuple
+				{
+					const LV2_Atom_Object *obj = buf;
 
-		case 10:
-		case 11:
-		case 12:
-		case 13:
-		case 14:
-		case 15:
-		case 16:
-		case 17:
-		{
-			if(protocol == 0)
-			{
-				handle->out0[index - 10] = *(const float *)buf;
-				nk_pugl_post_redisplay(&handle->win);
+					atom_ser_t *ser = &handle->ser;
+					ser->offset = 0;
+					lv2_atom_forge_set_sink(&handle->forge, _sink, _deref, ser);
+
+					LV2_Atom_Forge_Ref ref;
+					if(props_advance(&handle->props, &handle->forge, 0, obj, &ref))
+					{
+						nk_pugl_post_redisplay(&handle->win);
+					}
+				}
 			}
 		} break;
 	}

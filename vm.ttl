@@ -353,8 +353,8 @@ vm:lfo
 		vm:graph [
 			a atom:Tuple ;
 			rdf:value (
-				# Phase := (Beat % Control0 ) / Control0
-				0 vm:opInput
+				# Phase := (Beat % Cycles) / Control0
+				2.0 # Cycles per beat
 				vm:opPush
 				time:beat
 				vm:opSwap
