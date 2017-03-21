@@ -69,7 +69,7 @@ struct _plughandle_t {
 	float dy;
 
 	atom_ser_t ser;
-	opcode_t opcode;
+	vm_api_impl_t api [OP_MAX];
 
 	float in0 [CTRL_MAX];
 	float out0 [CTRL_MAX];
@@ -85,56 +85,6 @@ struct _desc_t {
 	unsigned npop;
 };
 
-static const char *op_labels [OP_MAX] = {
-	[OP_NOP]    = "-",
-	[OP_CTRL]   = "Control        (1:1)",
-	[OP_PUSH]   = "Push           (1:2)",
-	[OP_ADD]    = "Add            (2:1)",
-	[OP_SUB]    = "Sub            (2:1)",
-	[OP_MUL]    = "Mul            (2:1)",
-	[OP_DIV]    = "Div            (2:1)",
-	[OP_NEG]    = "Neg            (1:1)",
-	[OP_ABS]    = "Abs            (1:1)",
-	[OP_POW]    = "Pow            (2:1)",
-	[OP_SQRT]   = "Sqrt           (1:1)",
-	[OP_MOD]    = "Mod            (2:1)",
-	[OP_EXP]    = "Exp            (1:1)",
-	[OP_EXP_2]  = "Exp2           (1:1)",
-	[OP_LOG]    = "Log            (1:1)",
-	[OP_LOG_2]  = "Log2           (1:1)",
-	[OP_LOG_10] = "Log10          (1:1)",
-	[OP_SIN]    = "Sin            (1:1)",
-	[OP_COS]    = "Cos            (1:1)",
-	[OP_SWAP]   = "Swap           (2:2)",
-	[OP_FRAME]  = "Frame          (-:1)",
-	[OP_SRATE]  = "Sample Rate    (-:1)",
-	[OP_PI]     = "Pi             (-:1)",
-	[OP_EQ]     = "Equal          (2:1)",
-	[OP_LT]     = "LessThan       (2:1)",
-	[OP_GT]     = "GreaterThan    (2:1)",
-	[OP_LE]     = "LessOrEqual    (2:1)",
-	[OP_GE]     = "GreaterOrEqual (2:1)",
-	[OP_AND]    = "Boolean And    (2:1)",
-	[OP_OR]     = "Boolean Or     (2:1)",
-	[OP_NOT]    = "Boolean Not    (1:1)",
-	[OP_BAND]   = "Bitwise And    (2:1)",
-	[OP_BOR]    = "Bitwise Or     (2:1)",
-	[OP_BNOT]   = "Bitwise Not    (1:1)",
-	[OP_TER]    = "Ternary        (3:1)",
-	[OP_STORE]  = "Store          (2:0)",
-	[OP_LOAD]   = "Load           (1:1)",
-};
-
-static const char *cmd_labels [COMMAND_MAX] = {
-	[COMMAND_NOP]    = "-",
-	[COMMAND_OPCODE] = "Op Code"	,
-	[COMMAND_BOOL]   = "Boolean"	,
-	[COMMAND_INT]    = "Integer"	,
-	[COMMAND_LONG]   = "Long"	,
-	[COMMAND_FLOAT]  = "Float"	,
-	[COMMAND_DOUBLE] = "Double"
-};
-
 static void
 _intercept_graph(void *data, LV2_Atom_Forge *forge, int64_t frames,
 	props_event_t event, props_impl_t *impl)
@@ -143,7 +93,7 @@ _intercept_graph(void *data, LV2_Atom_Forge *forge, int64_t frames,
 
 	handle->graph_size = impl->value.size;
 
-	vm_deserialize(&handle->opcode, &handle->forge, handle->cmds,
+	vm_deserialize(handle->api, &handle->forge, handle->cmds,
 		impl->value.size, impl->value.body);
 }
 
@@ -312,7 +262,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 
 				const command_enum_t old_cmd_type = cmd->type;
 				int cmd_type = old_cmd_type;
-				nk_combobox(ctx, cmd_labels, COMMAND_MAX, &cmd_type, dy, nk_vec2(nk_widget_width(ctx), dy*COMMAND_MAX));
+				nk_combobox(ctx, command_labels, COMMAND_MAX, &cmd_type, dy, nk_vec2(nk_widget_width(ctx), dy*COMMAND_MAX)); //FIXME
 				if(old_cmd_type != cmd_type)
 				{
 					cmd->type = cmd_type;
@@ -374,12 +324,25 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 					} break;
 					case COMMAND_OPCODE:
 					{
-						int op = cmd->op;
-						nk_combobox(ctx, op_labels, OP_MAX, &op, dy, nk_vec2(nk_widget_width(ctx), dy*OP_MAX));
-						if(op != cmd->op)
+						const bool show_mnemo = true; //FIXME
+						const char *desc = show_mnemo && vm_api_def[cmd->op].mnemo
+							? vm_api_def[cmd->op].mnemo
+							: vm_api_def[cmd->op].label;
+						if(nk_combo_begin_label(ctx, desc, nk_vec2(nk_widget_width(ctx), dy*OP_MAX))) //FIXME
 						{
-							cmd->op = op;
-							sync = true;
+							nk_layout_row_dynamic(ctx, dy, 1);
+							for(unsigned op = 0; op < OP_MAX; op++)
+							{
+								desc = show_mnemo && vm_api_def[op].mnemo
+									? vm_api_def[op].mnemo
+									: vm_api_def[op].label;
+								if(nk_combo_item_label(ctx, desc, NK_TEXT_LEFT))
+								{
+									cmd->op = op;
+									sync = true;
+								}
+							}
+							nk_combo_end(ctx);
 						}
 					} break;
 					case COMMAND_NOP:
@@ -404,7 +367,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 				atom_ser_t *ser = &handle->ser;
 				ser->offset = 0;
 				lv2_atom_forge_set_sink(&handle->forge, _sink, _deref, ser);
-				vm_serialize(&handle->opcode, &handle->forge, handle->cmds);
+				vm_serialize(handle->api, &handle->forge, handle->cmds);
 				props_impl_t *impl = _props_impl_search(&handle->props, handle->vm_graph);
 				if(impl)
 					_props_set(&handle->props, impl, ser->atom->type, ser->atom->size, LV2_ATOM_BODY_CONST(ser->atom));
@@ -465,7 +428,7 @@ instantiate(const LV2UI_Descriptor *descriptor, const char *plugin_uri,
 
 	lv2_atom_forge_init(&handle->forge, handle->map);
 
-	vm_opcode_init(&handle->opcode, handle->map);
+	vm_api_init(handle->api, handle->map);
 
 	if(!props_init(&handle->props, MAX_NPROPS, plugin_uri, handle->map, handle))
 	{

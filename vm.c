@@ -62,7 +62,7 @@ struct _plughandle_t {
 	plugstate_t stash;
 
 	uint32_t graph_size;
-	opcode_t opcode;
+	vm_api_impl_t api [OP_MAX];
 
 	vm_stack_t stack;
 	bool recalc;
@@ -133,7 +133,7 @@ _intercept_graph(void *data, LV2_Atom_Forge *forge, int64_t frames,
 	handle->graph_size = impl->value.size;
 	handle->recalc = true;
 
-	handle->is_dynamic = vm_deserialize(&handle->opcode, &handle->forge, handle->cmds,
+	handle->is_dynamic = vm_deserialize(handle->api, &handle->forge, handle->cmds,
 		impl->value.size, impl->value.body);
 
 	handle->sync = true;
@@ -180,7 +180,7 @@ instantiate(const LV2_Descriptor* descriptor, num_t rate,
 	handle->vm_graph = handle->map->map(handle->map->handle, VM__graph);
 
 	lv2_atom_forge_init(&handle->forge, handle->map);
-	vm_opcode_init(&handle->opcode, handle->map);
+	vm_api_init(handle->api, handle->map);
 
 	if(!props_init(&handle->props, MAX_NPROPS, descriptor->URI, handle->map, handle))
 	{
@@ -435,16 +435,6 @@ run(LV2_Handle instance, uint32_t nsamples)
 							_stack_pop_num(&handle->stack, ab, 2);
 							_stack_push_num(&handle->stack, ab, 2);
 						} break;
-						case OP_FRAME:
-						{
-							num_t c = handle->frame;
-							_stack_push(&handle->stack, c);
-						} break;
-						case OP_SRATE:
-						{
-							num_t c = handle->srate;
-							_stack_push(&handle->stack, c);
-						} break;
 						case OP_PI:
 						{
 							num_t c = M_PI;
@@ -529,6 +519,24 @@ run(LV2_Handle instance, uint32_t nsamples)
 							const unsigned c = ~a;
 							_stack_push(&handle->stack, c);
 						} break;
+						case OP_LSHIFT:
+						{
+							num_t ab [2];
+							_stack_pop_num(&handle->stack, ab, 2);
+							const unsigned a = ab[1];
+							const unsigned b = ab[0];
+							const unsigned c = a <<  b;
+							_stack_push(&handle->stack, c);
+						} break;
+						case OP_RSHIFT:
+						{
+							num_t ab [2];
+							_stack_pop_num(&handle->stack, ab, 2);
+							const unsigned a = ab[1];
+							const unsigned b = ab[0];
+							const unsigned c = a >>  b;
+							_stack_push(&handle->stack, c);
+						} break;
 						case OP_TER:
 						{
 							num_t ab [3];
@@ -550,6 +558,47 @@ run(LV2_Handle instance, uint32_t nsamples)
 							const num_t c = handle->stack.regs[idx & REG_MASK];
 							_stack_push(&handle->stack, c);
 						} break;
+
+						// time
+						case OP_BAR_BEAT:
+						{
+							//TODO
+						} break;
+						case OP_BAR:
+						{
+							//TODO
+						} break;
+						case OP_BEAT:
+						{
+							//TODO
+						} break;
+						case OP_BEAT_UNIT:
+						{
+							//TODO
+						} break;
+						case OP_BPB:
+						{
+							//TODO
+						} break;
+						case OP_BPM:
+						{
+							//TODO
+						} break;
+						case OP_FRAME:
+						{
+							num_t c = handle->frame; //FIXME use time:frame
+							_stack_push(&handle->stack, c);
+						} break;
+						case OP_FPS:
+						{
+							num_t c = handle->srate; //FIXME use time:framesPerSecond
+							_stack_push(&handle->stack, c);
+						} break;
+						case OP_SPEED:
+						{
+							//TODO
+						} break;
+
 						case OP_NOP:
 						{
 							terminate = true;

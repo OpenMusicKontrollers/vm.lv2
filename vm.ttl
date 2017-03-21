@@ -56,114 +56,78 @@ vm:graph
 	rdfs:label "Graph" ;
 	rdfs:comment "vm graph tuple" .
 
-vm:opControl
-	a rdfs:Class, owl:Class ;
-	rdfs:label "Push Control" .
+vm:opInput
+	a rdfs:Datatype ; rdfs:label "Input port value" .
 vm:opPush
-	a rdfs:Class, owl:Class ;
-	rdfs:label "Push Top of stack" .
+	a rdfs:Datatype ; rdfs:label "Push Top of stack" .
 vm:opAdd
-	a rdfs:Class, owl:Class ;
-	rdfs:label "Addition" .
+	a rdfs:Datatype ; rdfs:label "Addition" .
 vm:opSub
-	a rdfs:Class, owl:Class ;
-	rdfs:label "Subtraction" .
+	a rdfs:Datatype ; rdfs:label "Subtraction" .
 vm:opMul
-	a rdfs:Class, owl:Class ;
-	rdfs:label "Multiplication" .
+	a rdfs:Datatype ; rdfs:label "Multiplication" .
 vm:opDiv
-	a rdfs:Class, owl:Class ;
-	rdfs:label "Division" .
+	a rdfs:Datatype ; rdfs:label "Division" .
 vm:opNeg
-	a rdfs:Class, owl:Class ;
-	rdfs:label "Negate" .
+	a rdfs:Datatype ; rdfs:label "Negate" .
 vm:opAbs
-	a rdfs:Class, owl:Class ;
-	rdfs:label "Absolute" .
+	a rdfs:Datatype ; rdfs:label "Absolute value" .
 vm:opPow
-	a rdfs:Class, owl:Class ;
-	rdfs:label "Power" .
+	a rdfs:Datatype ; rdfs:label "Power" .
 vm:opSqrt
-	a rdfs:Class, owl:Class ;
-	rdfs:label "Square root" .
+	a rdfs:Datatype ; rdfs:label "Square root" .
 vm:opMod
-	a rdfs:Class, owl:Class ;
-	rdfs:label "Modulo" .
+	a rdfs:Datatype ; rdfs:label "Modulo" .
 vm:opExp
-	a rdfs:Class, owl:Class ;
-	rdfs:label "Exponentiation" .
+	a rdfs:Datatype ; rdfs:label "Exponentiation" .
 vm:opExp2
-	a rdfs:Class, owl:Class ;
-	rdfs:label "Exponentiation base 2" .
+	a rdfs:Datatype ; rdfs:label "Exponentiation base 2" .
 vm:opLog
-	a rdfs:Class, owl:Class ;
-	rdfs:label "Logarithm" .
+	a rdfs:Datatype ; rdfs:label "Logarithm" .
 vm:opLog2
-	a rdfs:Class, owl:Class ;
-	rdfs:label "Logarithm base 2" .
+	a rdfs:Datatype ; rdfs:label "Logarithm base 2" .
 vm:opLog10
-	a rdfs:Class, owl:Class ;
-	rdfs:label "Logarithm base 10" .
+	a rdfs:Datatype ; rdfs:label "Logarithm base 10" .
 vm:opSin
-	a rdfs:Class, owl:Class ;
-	rdfs:label "Sinus" .
+	a rdfs:Datatype ; rdfs:label "Sinus" .
 vm:opCos
-	a rdfs:Class, owl:Class ;
-	rdfs:label "Cosinus" .
+	a rdfs:Datatype ; rdfs:label "Cosinus" .
 vm:opSwap
-	a rdfs:Class, owl:Class ;
-	rdfs:label "Swap" .
-vm:opFrame
-	a rdfs:Class, owl:Class ;
-	rdfs:label "Frame" .
-vm:opSampleRate
-	a rdfs:Class, owl:Class ;
-	rdfs:label "SampleRate" .
+	a rdfs:Datatype ; rdfs:label "Swap" .
 vm:opPi
-	a rdfs:Class, owl:Class ;
-	rdfs:label "Pi" .
+	a rdfs:Datatype ; rdfs:label "Pi" .
 vm:opEq
-	a rdfs:Class, owl:Class ;
-	rdfs:label "Equal" .
+	a rdfs:Datatype ; rdfs:label "Equal" .
 vm:opLt
-	a rdfs:Class, owl:Class ;
-	rdfs:label "Less than" .
+	a rdfs:Datatype ; rdfs:label "Less than" .
 vm:opGt
-	a rdfs:Class, owl:Class ;
-	rdfs:label "Greater than" .
+	a rdfs:Datatype ; rdfs:label "Greater than" .
 vm:opLe
-	a rdfs:Class, owl:Class ;
-	rdfs:label "Less or equal" .
+	a rdfs:Datatype ; rdfs:label "Less or equal" .
 vm:opGe
-	a rdfs:Class, owl:Class ;
-	rdfs:label "Greater or equal" .
+	a rdfs:Datatype ; rdfs:label "Greater or equal" .
 vm:opAnd
-	a rdfs:Class, owl:Class ;
-	rdfs:label "Boolean And" .
+	a rdfs:Datatype ; rdfs:label "And" .
 vm:opOr
-	a rdfs:Class, owl:Class ;
-	rdfs:label "Boolean Or" .
+	a rdfs:Datatype ; rdfs:label "Or" .
 vm:opNot
-	a rdfs:Class, owl:Class ;
-	rdfs:label "Boolean Not" .
+	a rdfs:Datatype ; rdfs:label "Not" .
 vm:opBAnd
-	a rdfs:Class, owl:Class ;
-	rdfs:label "Bitwise And" .
+	a rdfs:Datatype ; rdfs:label "Bitwise And" .
 vm:opBOr
-	a rdfs:Class, owl:Class ;
-	rdfs:label "Bitwise Or" .
+	a rdfs:Datatype ; rdfs:label "Bitwise Or" .
 vm:opBNot
-	a rdfs:Class, owl:Class ;
-	rdfs:label "Bitwise Not" .
+	a rdfs:Datatype ; rdfs:label "Bitwise Not" .
+vm:opLShift
+	a rdfs:Datatype ; rdfs:label "Left shift" .
+vm:opRShift
+	a rdfs:Datatype ; rdfs:label "Right shift" .
 vm:opTernary
-	a rdfs:Class, owl:Class ;
-	rdfs:label "Ternary" .
+	a rdfs:Datatype ; rdfs:label "Ternary" .
 vm:opStore
-	a rdfs:Class, owl:Class ;
-	rdfs:label "Store in registry" .
+	a rdfs:Datatype ; rdfs:label "Store in register" .
 vm:opLoad
-	a rdfs:Class, owl:Class ;
-	rdfs:label "Load from registry" .
+	a rdfs:Datatype ; rdfs:label "Load from register" .
 
 # Plugin
 vm:vm
@@ -344,14 +308,14 @@ vm:vm
 		vm:graph [
 			a atom:Tuple ;
 			rdf:value (
-				7 vm:opControl
-				6 vm:opControl
-				5 vm:opControl
-				4 vm:opControl
-				3 vm:opControl
-				2 vm:opControl
-				1 vm:opControl
-				0 vm:opControl
+				7 vm:opInput
+				6 vm:opInput
+				5 vm:opInput
+				4 vm:opInput
+				3 vm:opInput
+				2 vm:opInput
+				1 vm:opInput
+				0 vm:opInput
 			)
 		]
 	] .
@@ -369,7 +333,7 @@ vm:dBFS
 			a atom:Tuple ;
 			rdf:value (
 				# dBFS := Log10( |Control0| ) * 20.0
-				0 vm:opControl
+				0 vm:opInput
 				vm:opAbs
 				vm:opLog10
 				20.0 vm:opMul
@@ -390,11 +354,11 @@ vm:lfo
 			a atom:Tuple ;
 			rdf:value (
 				# Phase := (Frame % (SampleRate * Control0) ) / (SampleRate * Control0)
-				vm:opSampleRate
-				0 vm:opControl
+				time:framesPerSecond
+				0 vm:opInput
 				vm:opMul
 				vm:opPush
-				vm:opFrame
+				time:frame
 				vm:opSwap
 				vm:opMod
 				vm:opSwap

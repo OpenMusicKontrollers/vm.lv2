@@ -26,54 +26,19 @@
 #include "lv2/lv2plug.in/ns/ext/time/time.h"
 #include "lv2/lv2plug.in/ns/ext/midi/midi.h"
 #include "lv2/lv2plug.in/ns/ext/state/state.h"
+#include "lv2/lv2plug.in/ns/ext/time/time.h"
 #include "lv2/lv2plug.in/ns/extensions/ui/ui.h"
 #include "lv2/lv2plug.in/ns/lv2core/lv2.h"
 
-#define VM_URI               "http://open-music-kontrollers.ch/lv2/vm"
-#define VM_PREFIX            VM_URI"#"
+#include <timely.lv2/timely.h>
 
-#define VM__vm               VM_PREFIX"vm"
-#define VM__vm_ui            VM_PREFIX"vm_ui"
+#define VM_URI                "http://open-music-kontrollers.ch/lv2/vm"
+#define VM_PREFIX             VM_URI"#"
 
-#define VM__graph            VM_PREFIX"graph"
+#define VM__vm                VM_PREFIX"vm"
+#define VM__vm_ui             VM_PREFIX"vm_ui"
 
-#define VM__opNop            VM_PREFIX"opNop"
-#define VM__opControl        VM_PREFIX"opControl"
-#define VM__opPush           VM_PREFIX"opPush"
-#define VM__opAdd            VM_PREFIX"opAdd"
-#define VM__opSub            VM_PREFIX"opSub"
-#define VM__opMul            VM_PREFIX"opMul"
-#define VM__opDiv            VM_PREFIX"opDiv"
-#define VM__opNeg            VM_PREFIX"opNeg"
-#define VM__opAbs            VM_PREFIX"opAbs"
-#define VM__opPow            VM_PREFIX"opPow"
-#define VM__opSqrt           VM_PREFIX"opSqrt"
-#define VM__opMod            VM_PREFIX"opMod"
-#define VM__opExp            VM_PREFIX"opExp"
-#define VM__opExp2           VM_PREFIX"opExp2"
-#define VM__opLog            VM_PREFIX"opLog"
-#define VM__opLog2           VM_PREFIX"opLog2"
-#define VM__opLog10          VM_PREFIX"opLog10"
-#define VM__opSin            VM_PREFIX"opSin"
-#define VM__opCos            VM_PREFIX"opCos"
-#define VM__opSwap           VM_PREFIX"opSwap"
-#define VM__opFrame          VM_PREFIX"opFrame"
-#define VM__opSampleRate     VM_PREFIX"opSampleRate"
-#define VM__opPi             VM_PREFIX"opPi"
-#define VM__opEq             VM_PREFIX"opEq"
-#define VM__opLt             VM_PREFIX"opLt"
-#define VM__opGt             VM_PREFIX"opGt"
-#define VM__opLe             VM_PREFIX"opLe"
-#define VM__opGe             VM_PREFIX"opGe"
-#define VM__opAnd            VM_PREFIX"opAnd"
-#define VM__opOr             VM_PREFIX"opOr"
-#define VM__opNot            VM_PREFIX"opNot"
-#define VM__opBAnd           VM_PREFIX"opBAnd"
-#define VM__opBOr            VM_PREFIX"opBOr"
-#define VM__opBNot           VM_PREFIX"opBNot"
-#define VM__opTernary        VM_PREFIX"opTernary"
-#define VM__opStore          VM_PREFIX"opStore"
-#define VM__opLoad           VM_PREFIX"opLoad"
+#define VM__graph             VM_PREFIX"graph"
 
 #define MAX_NPROPS 1
 #define CTRL_MAX   0x8
@@ -85,9 +50,22 @@
 
 typedef enum _opcode_enum_t opcode_enum_t;
 typedef enum _command_enum_t command_enum_t;
-typedef struct _opcode_t opcode_t;
 typedef struct _command_t command_t;
 typedef struct _plugstate_t plugstate_t;
+typedef struct _vm_api_def_t vm_api_def_t;
+typedef struct _vm_api_impl_t vm_api_impl_t;
+
+struct _vm_api_def_t {
+	const char *uri;
+	const char *mnemo;
+	const char *label;
+	unsigned npops;
+	unsigned npushs;
+};
+
+struct _vm_api_impl_t {
+	LV2_URID urid;
+};
 
 enum _opcode_enum_t{
 	OP_NOP = 0,
@@ -111,8 +89,6 @@ enum _opcode_enum_t{
 	OP_SIN,
 	OP_COS,
 	OP_SWAP,
-	OP_FRAME,
-	OP_SRATE,
 	OP_PI,
 	OP_EQ,
 	OP_LT,
@@ -125,9 +101,20 @@ enum _opcode_enum_t{
 	OP_BAND,
 	OP_BOR,
 	OP_BNOT,
+	OP_LSHIFT,
+	OP_RSHIFT,
 	OP_TER,
 	OP_STORE,
 	OP_LOAD,
+	OP_BAR_BEAT,
+	OP_BAR,
+	OP_BEAT,
+	OP_BEAT_UNIT,
+	OP_BPB,
+	OP_BPM,
+	OP_FRAME,
+	OP_FPS,
+	OP_SPEED,
 
 	OP_MAX,
 };
@@ -143,10 +130,6 @@ enum _command_enum_t {
 	COMMAND_DOUBLE,
 
 	COMMAND_MAX,
-};
-
-struct _opcode_t {
-	LV2_URID op [OP_MAX];
 };
 
 struct _command_t {
@@ -165,73 +148,370 @@ struct _plugstate_t {
 	uint8_t graph [GRAPH_SIZE];
 };
 
-static const char *opcode_uris [OP_MAX] = {
-	[OP_NOP]    = VM__opNop,
-	[OP_CTRL]   = VM__opControl,
-	[OP_PUSH]   = VM__opPush,
-	[OP_ADD]    = VM__opAdd,
-	[OP_SUB]    = VM__opSub,
-	[OP_MUL]    = VM__opMul,
-	[OP_DIV]    = VM__opDiv,
-	[OP_NEG]    = VM__opNeg,
-	[OP_ABS]    = VM__opAbs,
-	[OP_POW]    = VM__opPow,
-	[OP_SQRT]   = VM__opSqrt,
-	[OP_MOD]    = VM__opMod,
-	[OP_EXP]    = VM__opExp,
-	[OP_EXP_2]  = VM__opExp2,
-	[OP_LOG]    = VM__opLog,
-	[OP_LOG_2]  = VM__opLog2,
-	[OP_LOG_10] = VM__opLog10,
-	[OP_SIN]    = VM__opSin,
-	[OP_COS]    = VM__opCos,
-	[OP_SWAP]   = VM__opSwap,
-	[OP_FRAME]  = VM__opFrame,
-	[OP_SRATE]  = VM__opSampleRate,
-	[OP_PI]     = VM__opPi,
-	[OP_EQ]     = VM__opEq,
-	[OP_LT]     = VM__opLt,
-	[OP_GT]     = VM__opGt,
-	[OP_LE]     = VM__opLe,
-	[OP_GE]     = VM__opGe,
-	[OP_AND]    = VM__opAnd,
-	[OP_OR]     = VM__opOr,
-	[OP_NOT]    = VM__opNot,
-	[OP_BAND]   = VM__opBAnd,
-	[OP_BOR]    = VM__opBOr,
-	[OP_BNOT]   = VM__opBNot,
-	[OP_TER]    = VM__opTernary,
-	[OP_STORE]  = VM__opStore,
-	[OP_LOAD]   = VM__opLoad,
+static const char *command_labels [COMMAND_MAX] = {
+	[COMMAND_NOP]    = "",
+	[COMMAND_OPCODE] = "Op Code"	,
+	[COMMAND_BOOL]   = "Boolean"	,
+	[COMMAND_INT]    = "Integer"	,
+	[COMMAND_LONG]   = "Long"	,
+	[COMMAND_FLOAT]  = "Float"	,
+	[COMMAND_DOUBLE] = "Double"
+};
+
+static const vm_api_def_t vm_api_def [OP_MAX] = {
+	[OP_NOP]  = {
+		.uri    = VM_PREFIX"opNop",
+		.label  = "",
+		.mnemo  = NULL,
+		.npops  = 0,
+		.npushs = 0
+	},
+	[OP_CTRL] = {
+		.uri    = VM_PREFIX"opInput",
+		.label  = "input",
+		.mnemo  = NULL,
+		.npops  = 1,
+		.npushs = 1
+	},
+	[OP_PUSH] = {
+		.uri    = VM_PREFIX"opPush",
+		.label  = "Push top",
+		.mnemo  = "push",
+		.npops  = 1,
+		.npushs = 2
+	},
+	[OP_ADD]  = {
+		.uri    = VM_PREFIX"opAdd",
+		.label  = "Add",
+		.mnemo  = "+",
+		.npops  = 2,
+		.npushs = 1
+	},
+	[OP_SUB]  = {
+		.uri    = VM_PREFIX"opSub",
+		.label  = "Subtract",
+		.mnemo  = "-",
+		.npops  = 2,
+		.npushs = 1
+	},
+	[OP_MUL]  = {
+		.uri    = VM_PREFIX"opMul",
+		.label  = "Multiply",
+		.mnemo  = "*",
+		.npops  = 2,
+		.npushs = 1
+	},
+	[OP_DIV]  = {
+		.uri    = VM_PREFIX"opDiv",
+		.label  = "Divide",
+		.mnemo  = "/",
+		.npops  = 2,
+		.npushs = 1
+	},
+	[OP_NEG]  = {
+		.uri    = VM_PREFIX"opNeg",
+		.label  = "Negate",
+		.mnemo  = "neg",
+		.npops  = 1,
+		.npushs = 1
+	},
+	[OP_ABS]  = {
+		.uri    = VM_PREFIX"opAbs",
+		.label  = "Absolute",
+		.mnemo  = "abs",
+		.npops  = 1,
+		.npushs = 1
+	},
+	[OP_POW]  = {
+		.uri    = VM_PREFIX"opPow",
+		.label  = "Power",
+		.mnemo  = "^",
+		.npops  = 2,
+		.npushs = 1
+	},
+	[OP_SQRT]  = {
+		.uri    = VM_PREFIX"opSqrt",
+		.label  = "Square root",
+		.mnemo  = "sqrt",
+		.npops  = 1,
+		.npushs = 1
+	},
+	[OP_MOD]  = {
+		.uri    = VM_PREFIX"opMod",
+		.label  = "Modulo",
+		.mnemo  = "%",
+		.npops  = 2,
+		.npushs = 1
+	},
+	[OP_EXP]  = {
+		.uri    = VM_PREFIX"opExp",
+		.label  = "Exponential",
+		.mnemo  = "exp",
+		.npops  = 1,
+		.npushs = 1
+	},
+	[OP_EXP_2]  = {
+		.uri    = VM_PREFIX"opExp2",
+		.label  = "Exponential base 2",
+		.mnemo  = "exp2",
+		.npops  = 1,
+		.npushs = 1
+	},
+	[OP_LOG]  = {
+		.uri    = VM_PREFIX"opLog",
+		.label  = "Logarithm",
+		.mnemo  = "log",
+		.npops  = 1,
+		.npushs = 1
+	},
+	[OP_LOG_2]  = {
+		.uri    = VM_PREFIX"opLog2",
+		.label  = "Logarithm base 2",
+		.mnemo  = "log2",
+		.npops  = 1,
+		.npushs = 1
+	},
+	[OP_LOG_10]  = {
+		.uri    = VM_PREFIX"opLog10",
+		.label  = "Logarithm base 10",
+		.mnemo  = "log10",
+		.npops  = 1,
+		.npushs = 1
+	},
+	[OP_SIN]  = {
+		.uri    = VM_PREFIX"opSin",
+		.label  = "Sinus",
+		.mnemo  = "sin",
+		.npops  = 1,
+		.npushs = 1
+	},
+	[OP_COS]  = {
+		.uri    = VM_PREFIX"opCos",
+		.label  = "Cosinus",
+		.mnemo  = "cos",
+		.npops  = 1,
+		.npushs = 1
+	},
+	[OP_SWAP]  = {
+		.uri    = VM_PREFIX"opSwap",
+		.label  = "Swap",
+		.mnemo  = "swap",
+		.npops  = 2,
+		.npushs = 2
+	},
+	[OP_PI]  = {
+		.uri    = VM_PREFIX"opPi",
+		.label  = "Pi",
+		.mnemo  = "pi",
+		.npops  = 0,
+		.npushs = 1
+	},
+	[OP_EQ]  = {
+		.uri    = VM_PREFIX"opEq",
+		.label  = "Equal",
+		.mnemo  = "==",
+		.npops  = 2,
+		.npushs = 1
+	},
+	[OP_LT]  = {
+		.uri    = VM_PREFIX"opLt",
+		.label  = "Less than",
+		.mnemo  = "<",
+		.npops  = 2,
+		.npushs = 1
+	},
+	[OP_GT]  = {
+		.uri    = VM_PREFIX"opGt",
+		.label  = "Greater than",
+		.mnemo  = ">",
+		.npops  = 2,
+		.npushs = 1
+	},
+	[OP_LE]  = {
+		.uri    = VM_PREFIX"opLe",
+		.label  = "Less or equal",
+		.mnemo  = "<=",
+		.npops  = 2,
+		.npushs = 1
+	},
+	[OP_GE]  = {
+		.uri    = VM_PREFIX"opGe",
+		.label  = "Greater or equal",
+		.mnemo  = ">=",
+		.npops  = 2,
+		.npushs = 1
+	},
+	[OP_AND]  = {
+		.uri    = VM_PREFIX"opAnd",
+		.label  = "And",
+		.mnemo  = "&&",
+		.npops  = 2,
+		.npushs = 1
+	},
+	[OP_OR]  = {
+		.uri    = VM_PREFIX"opOr",
+		.label  = "Or",
+		.mnemo  = "||",
+		.npops  = 2,
+		.npushs = 1
+	},
+	[OP_NOT]  = {
+		.uri    = VM_PREFIX"opNot",
+		.label  = "Not",
+		.mnemo  = "!",
+		.npops  = 1,
+		.npushs = 1
+	},
+	[OP_BAND]  = {
+		.uri    = VM_PREFIX"opBAnd",
+		.label  = "Bitwise and",
+		.mnemo  = "&",
+		.npops  = 2,
+		.npushs = 1
+	},
+	[OP_BOR]  = {
+		.uri    = VM_PREFIX"opBOr",
+		.label  = "Bitwise or",
+		.mnemo  = "|",
+		.npops  = 2,
+		.npushs = 1
+	},
+	[OP_BNOT]  = {
+		.uri    = VM_PREFIX"opBNot",
+		.label  = "Bitwise not",
+		.mnemo  = "~",
+		.npops  = 1,
+		.npushs = 1
+	},
+	[OP_LSHIFT]  = {
+		.uri    = VM_PREFIX"opLShift",
+		.label  = "Left shift",
+		.mnemo  = "<<",
+		.npops  = 2,
+		.npushs = 1
+	},
+	[OP_RSHIFT]  = {
+		.uri    = VM_PREFIX"opRShift",
+		.label  = "Right shift",
+		.mnemo  = ">>",
+		.npops  = 2,
+		.npushs = 1
+	},
+	[OP_TER]  = {
+		.uri    = VM_PREFIX"opTernary",
+		.label  = "Ternary operator",
+		.mnemo  = "?",
+		.npops  = 3,
+		.npushs = 1
+	},
+	[OP_STORE]  = {
+		.uri    = VM_PREFIX"opStore",
+		.label  = "Store in register",
+		.mnemo  = "store",
+		.npops  = 2,
+		.npushs = 0
+	},
+	[OP_LOAD]  = {
+		.uri    = VM_PREFIX"opLoad",
+		.label  = "Load from register",
+		.mnemo  = "load",
+		.npops  = 1,
+		.npushs = 1
+	},
+	[OP_BAR_BEAT]  = {
+		.uri    = LV2_TIME__barBeat,
+		.label  = "time:barBeat",
+		.mnemo  = NULL,
+		.npops  = 0,
+		.npushs = 1
+	},
+	[OP_BAR]  = {
+		.uri    = LV2_TIME__bar,
+		.label  = "time:bar",
+		.mnemo  = NULL,
+		.npops  = 0,
+		.npushs = 1
+	},
+	[OP_BEAT]  = {
+		.uri    = LV2_TIME__beat,
+		.label  = "time:beat",
+		.mnemo  = NULL,
+		.npops  = 0,
+		.npushs = 1
+	},
+	[OP_BEAT_UNIT]  = {
+		.uri    = LV2_TIME__beatUnit,
+		.label  = "time:beatUnit",
+		.mnemo  = NULL,
+		.npops  = 0,
+		.npushs = 1
+	},
+	[OP_BPB]  = {
+		.uri    = LV2_TIME__beatsPerBar,
+		.label  = "time:beatsPerBar",
+		.mnemo  = NULL,
+		.npops  = 0,
+		.npushs = 1
+	},
+	[OP_BPM]  = {
+		.uri    = LV2_TIME__beatsPerMinute,
+		.label  = "time:beatsPerMinute",
+		.mnemo  = NULL,
+		.npops  = 0,
+		.npushs = 1
+	},
+	[OP_FRAME]  = {
+		.uri    = LV2_TIME__frame,
+		.label  = "time:frame",
+		.mnemo  = NULL,
+		.npops  = 0,
+		.npushs = 1
+	},
+	[OP_FPS]  = {
+		.uri    = LV2_TIME__framesPerSecond,
+		.label  = "time:framesPerSecond",
+		.mnemo  = NULL,
+		.npops  = 0,
+		.npushs = 1
+	},
+	[OP_SPEED]  = {
+		.uri    = LV2_TIME__speed,
+		.label  = "time:speed",
+		.mnemo  = NULL,
+		.npops  = 0,
+		.npushs = 1
+	},
 };
 
 static inline void
-vm_opcode_init(opcode_t *opcode, LV2_URID_Map *map)
+vm_api_init(vm_api_impl_t *impl, LV2_URID_Map *map)
 {
-	for(unsigned i = 0; i < OP_MAX; i++)
-		opcode->op[i] = map->map(map->handle, opcode_uris[i]);
+	for(unsigned op = 0; op < OP_MAX; op++)
+	{
+		impl[op].urid = map->map(map->handle, vm_api_def[op].uri);
+	}
 }
 
 static inline opcode_enum_t
-vm_opcode_unmap(opcode_t *opcode, LV2_URID otype)
+vm_api_unmap(vm_api_impl_t *impl, LV2_URID urid)
 {
-	for(unsigned i = 0; i < OP_MAX; i++)
+	for(unsigned op = 0; op < OP_MAX; op++)
 	{
-		if(otype == opcode->op[i])
-			return i;
+		if(impl[op].urid == urid)
+			return op;
 	}
 
 	return OP_NOP;
 }
 
 static inline LV2_URID
-vm_opcode_map(opcode_t *opcode, opcode_enum_t op)
+vm_api_map(vm_api_impl_t *impl, opcode_enum_t op)
 {
-	return opcode->op[op];
+	return impl[op].urid;
 }
 
 static inline LV2_Atom_Forge_Ref
-vm_serialize(opcode_t *opcode, LV2_Atom_Forge *forge, const command_t *cmds)
+vm_serialize(vm_api_impl_t *impl, LV2_Atom_Forge *forge, const command_t *cmds)
 {
 	LV2_Atom_Forge_Frame frame;
 	LV2_Atom_Forge_Ref ref = lv2_atom_forge_tuple(forge, &frame);
@@ -270,7 +550,7 @@ vm_serialize(opcode_t *opcode, LV2_Atom_Forge *forge, const command_t *cmds)
 			} break;
 			case COMMAND_OPCODE:
 			{
-				const LV2_URID otype = vm_opcode_map(opcode, cmd->op);
+				const LV2_URID otype = vm_api_map(impl, cmd->op);
 				if(ref && otype)
 					ref = lv2_atom_forge_urid(forge, otype);
 			} break;
@@ -293,7 +573,7 @@ vm_serialize(opcode_t *opcode, LV2_Atom_Forge *forge, const command_t *cmds)
 }
 
 static inline bool
-vm_deserialize(opcode_t *opcode, LV2_Atom_Forge *forge,
+vm_deserialize(vm_api_impl_t *impl, LV2_Atom_Forge *forge,
 	command_t *cmds, uint32_t size, const LV2_Atom *body)
 {
 	command_t *cmd = cmds;
@@ -333,10 +613,20 @@ vm_deserialize(opcode_t *opcode, LV2_Atom_Forge *forge,
 		else if(item->type == forge->URID)
 		{
 			cmd->type = COMMAND_OPCODE;
-			cmd->op = vm_opcode_unmap(opcode, ((const LV2_Atom_URID *)item)->body);
+			cmd->op = vm_api_unmap(impl, ((const LV2_Atom_URID *)item)->body);
 
-			if(cmd->op == OP_FRAME)
+			if(  (cmd->op == OP_BAR_BEAT)
+				|| (cmd->op == OP_BAR)
+				|| (cmd->op == OP_BEAT)
+				|| (cmd->op == OP_BEAT_UNIT)
+				|| (cmd->op == OP_BPB)
+				|| (cmd->op == OP_BPM)
+				|| (cmd->op == OP_FRAME)
+				|| (cmd->op == OP_FPS)
+				|| (cmd->op == OP_SPEED) )
+			{
 				is_dynamic = true;
+			}
 		}
 		else
 		{
