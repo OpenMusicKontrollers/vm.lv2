@@ -262,7 +262,8 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 
 				const command_enum_t old_cmd_type = cmd->type;
 				int cmd_type = old_cmd_type;
-				nk_combobox(ctx, command_labels, COMMAND_MAX, &cmd_type, dy, nk_vec2(nk_widget_width(ctx), dy*COMMAND_MAX)); //FIXME
+				nk_combobox(ctx, command_labels, COMMAND_MAX, &cmd_type,
+					dy, nk_vec2(nk_widget_width(ctx), dy*14));
 				if(old_cmd_type != cmd_type)
 				{
 					cmd->type = cmd_type;
@@ -328,7 +329,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 						const char *desc = show_mnemo && vm_api_def[cmd->op].mnemo
 							? vm_api_def[cmd->op].mnemo
 							: vm_api_def[cmd->op].label;
-						if(nk_combo_begin_label(ctx, desc, nk_vec2(nk_widget_width(ctx), dy*OP_MAX))) //FIXME
+						if(nk_combo_begin_label(ctx, desc, nk_vec2(nk_widget_width(ctx), dy*14)))
 						{
 							nk_layout_row_dynamic(ctx, dy, 1);
 							for(unsigned op = 0; op < OP_MAX; op++)
@@ -361,6 +362,10 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 					break;
 				}
 			}
+
+			// add spacing so we can see the whole combobox of last elements
+			nk_layout_row_dynamic(ctx, dy, 1);
+			nk_spacing(ctx, 10);
 
 			if(sync)
 			{

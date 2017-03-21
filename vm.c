@@ -65,14 +65,13 @@ struct _plughandle_t {
 	vm_api_impl_t api [OP_MAX];
 
 	vm_stack_t stack;
-	bool recalc;
-	bool sync;
-	bool is_dynamic;
+	bool needs_recalc;
+	bool needs_sync;
+	bool uses_time;
 
 	command_t cmds [ITEMS_MAX];
 
-	num_t srate;
-	int64_t frame;
+	timely_t timely;
 };
 
 static inline void
@@ -131,12 +130,13 @@ _intercept_graph(void *data, LV2_Atom_Forge *forge, int64_t frames,
 	plughandle_t *handle = data;
 
 	handle->graph_size = impl->value.size;
-	handle->recalc = true;
+	handle->needs_recalc = true;
 
-	handle->is_dynamic = vm_deserialize(handle->api, &handle->forge, handle->cmds,
+	handle->uses_time = vm_deserialize(handle->api, &handle->forge, handle->cmds,
 		impl->value.size, impl->value.body);
 
-	handle->sync = true;
+	handle->needs_sync = true;
+	handle->needs_recalc = true;
 }
 
 static const props_def_t defs [MAX_NPROPS] = {
@@ -149,6 +149,15 @@ static const props_def_t defs [MAX_NPROPS] = {
 		.event_cb = _intercept_graph,
 	}
 };
+
+static void
+_cb(timely_t *timely, int64_t frames, LV2_URID type, void *data)
+{
+	plughandle_t *handle = data;
+
+	if(handle->uses_time)
+		handle->needs_recalc = true;
+}
 
 static LV2_Handle
 instantiate(const LV2_Descriptor* descriptor, num_t rate,
@@ -181,6 +190,17 @@ instantiate(const LV2_Descriptor* descriptor, num_t rate,
 
 	lv2_atom_forge_init(&handle->forge, handle->map);
 	vm_api_init(handle->api, handle->map);
+	const timely_mask_t mask = TIMELY_MASK_BAR_BEAT
+		| TIMELY_MASK_BAR
+		| TIMELY_MASK_BEAT_UNIT
+		| TIMELY_MASK_BEATS_PER_BAR
+		| TIMELY_MASK_BEATS_PER_MINUTE
+		| TIMELY_MASK_FRAME
+		| TIMELY_MASK_FRAMES_PER_SECOND
+		| TIMELY_MASK_SPEED
+		| TIMELY_MASK_BAR_BEAT_WHOLE
+		| TIMELY_MASK_BAR_WHOLE;
+	timely_init(&handle->timely, handle->map, rate, mask, _cb, handle);
 
 	if(!props_init(&handle->props, MAX_NPROPS, descriptor->URI, handle->map, handle))
 	{
@@ -196,8 +216,7 @@ instantiate(const LV2_Descriptor* descriptor, num_t rate,
 		return NULL;
 	}
 
-	handle->recalc = true;
-	handle->srate = rate;
+	handle->needs_recalc = true;
 
 	return handle;
 }
@@ -254,25 +273,29 @@ run(LV2_Handle instance, uint32_t nsamples)
 		const LV2_Atom *atom= &ev->body;
 		const LV2_Atom_Object *obj = (const LV2_Atom_Object *)&ev->body;
 
-		props_advance(&handle->props, &handle->forge, ev->time.frames, obj, &handle->ref);
-	}
+		if(!timely_advance(&handle->timely, obj, last_t, ev->time.frames))
+			props_advance(&handle->props, &handle->forge, ev->time.frames, obj, &handle->ref);
 
-	if(handle->sync)
+		last_t = ev->time.frames;
+	}
+	timely_advance(&handle->timely, NULL, last_t, nsamples);
+
+	if(handle->needs_sync)
 	{
 		props_set(&handle->props, &handle->forge, nsamples - 1, handle->vm_graph, &handle->ref);
-		handle->sync = false;
+		handle->needs_sync = false;
 	}
 
 	for(unsigned i = 0; i < CTRL_MAX; i++)
 	{
 		if(handle->in0[i] != *handle->in[i])
 		{
-			handle->recalc = true;
+			handle->needs_recalc = true;
 			handle->in0[i] = *handle->in[i];
 		}
 	}
 
-	if(handle->recalc || handle->is_dynamic)
+	if(handle->needs_recalc)
 	{
 		_stack_clear(&handle->stack);
 
@@ -562,41 +585,51 @@ run(LV2_Handle instance, uint32_t nsamples)
 						// time
 						case OP_BAR_BEAT:
 						{
-							//TODO
+							const num_t c = TIMELY_BAR_BEAT(&handle->timely);
+							_stack_push(&handle->stack, c);
 						} break;
 						case OP_BAR:
 						{
-							//TODO
+							const num_t c = TIMELY_BAR(&handle->timely);
+							_stack_push(&handle->stack, c);
 						} break;
 						case OP_BEAT:
 						{
-							//TODO
+							const num_t bar = TIMELY_BAR(&handle->timely);
+							const num_t beats_per_bar = TIMELY_BEATS_PER_BAR(&handle->timely);
+							const num_t bar_beat = TIMELY_BAR_BEAT(&handle->timely);
+							const num_t c = bar*beats_per_bar + bar_beat;
+							_stack_push(&handle->stack, c);
 						} break;
 						case OP_BEAT_UNIT:
 						{
-							//TODO
+							const num_t c = TIMELY_BEAT_UNIT(&handle->timely);
+							_stack_push(&handle->stack, c);
 						} break;
 						case OP_BPB:
 						{
-							//TODO
+							const num_t c = TIMELY_BEATS_PER_BAR(&handle->timely);
+							_stack_push(&handle->stack, c);
 						} break;
 						case OP_BPM:
 						{
-							//TODO
+							const num_t c = TIMELY_BEATS_PER_MINUTE(&handle->timely);
+							_stack_push(&handle->stack, c);
 						} break;
 						case OP_FRAME:
 						{
-							num_t c = handle->frame; //FIXME use time:frame
+							const num_t c = TIMELY_FRAME(&handle->timely);
 							_stack_push(&handle->stack, c);
 						} break;
 						case OP_FPS:
 						{
-							num_t c = handle->srate; //FIXME use time:framesPerSecond
+							const num_t c = TIMELY_FRAMES_PER_SECOND(&handle->timely);
 							_stack_push(&handle->stack, c);
 						} break;
 						case OP_SPEED:
 						{
-							//TODO
+							const num_t c = TIMELY_SPEED(&handle->timely);
+							_stack_push(&handle->stack, c);
 						} break;
 
 						case OP_NOP:
@@ -625,7 +658,7 @@ run(LV2_Handle instance, uint32_t nsamples)
 			printf("out %u: %f\n", i, handle->out0[i]);
 #endif
 
-		handle->recalc = false;
+		handle->needs_recalc = false;
 	}
 
 	if(handle->ref)
@@ -635,8 +668,6 @@ run(LV2_Handle instance, uint32_t nsamples)
 
 	for(unsigned i = 0; i < CTRL_MAX; i++)
 		*handle->out[i] = handle->out0[i];;
-
-	handle->frame += nsamples;
 }
 
 static void

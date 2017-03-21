@@ -579,7 +579,7 @@ vm_deserialize(vm_api_impl_t *impl, LV2_Atom_Forge *forge,
 	command_t *cmd = cmds;
 	memset(cmds, 0x0, sizeof(command_t)*ITEMS_MAX);
 
-	bool is_dynamic = false;
+	bool uses_time = false;
 
 	LV2_ATOM_TUPLE_BODY_FOREACH(body, size, item)
 	{
@@ -625,7 +625,7 @@ vm_deserialize(vm_api_impl_t *impl, LV2_Atom_Forge *forge,
 				|| (cmd->op == OP_FPS)
 				|| (cmd->op == OP_SPEED) )
 			{
-				is_dynamic = true;
+				uses_time = true;
 			}
 		}
 		else
@@ -639,7 +639,7 @@ vm_deserialize(vm_api_impl_t *impl, LV2_Atom_Forge *forge,
 			break;
 	}
 
-	return is_dynamic;
+	return uses_time;
 }
 
 #endif // _VM_LV2_H
