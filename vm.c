@@ -378,6 +378,19 @@ run(LV2_Handle instance, uint32_t nsamples)
 							const num_t c = handle->stack.regs[idx & REG_MASK];
 							_stack_push(&handle->stack, c);
 						} break;
+						case OP_BREAK:
+						{
+							const bool a = _stack_pop(&handle->stack);
+							if(a)
+								terminate = true;
+						} break;
+						/* dangerous
+						case OP_GOTO:
+						{
+							const int idx = _stack_pop(&handle->stack);
+							i = (idx - 1) & ITEMS_MASK;
+						} break;
+						*/
 
 						case OP_RAND:
 						{

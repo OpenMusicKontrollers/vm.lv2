@@ -68,6 +68,10 @@ vm:opStore
 	a rdfs:Datatype .
 vm:opLoad
 	a rdfs:Datatype .
+vm:opBreak
+	a rdfs:Datatype .
+#vm:opGoto
+#	a rdfs:Datatype .
 
 vm:opRand
 	a rdfs:Datatype .
