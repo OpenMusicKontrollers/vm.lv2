@@ -203,7 +203,7 @@ static const struct nk_color plot_fg_color = {
 };
 
 static inline void
-_draw_plot(struct nk_context *ctx, const float *vals, unsigned nvals)
+_draw_plot(struct nk_context *ctx, const float *vals)
 {
 	struct nk_command_buffer *canvas = nk_window_get_canvas(ctx);
 
@@ -222,23 +222,28 @@ _draw_plot(struct nk_context *ctx, const float *vals, unsigned nvals)
 		nk_stroke_rect(canvas, bounds, 0.f, 1.f, ctx->style.window.border_color);
 
 		float mem [PLOT_MAX*2];
-		for(unsigned i = 0; i < nvals; i++)
-		{
-			const float sx = (float)i / nvals;
-			const float sy = vals[i] / VM_VIS;
+		float x0 = -1.f;
+		unsigned j = 0;
 
+		for(unsigned i = 0; i < PLOT_MAX; i++)
+		{
+			const float sx = (float)i / PLOT_MAX;
 			const float x1 = bounds.x + sx*bounds.w;
+			if(x1 - x0 < 1.f)
+				continue;
+
+			const float sy = vals[i] / VM_VIS;
 			const float y1 = bounds.y + (0.5f - sy)*bounds.h;
 
-			const unsigned i2 = i*2;
-			mem[i2 + 0] = x1;
-			mem[i2 + 1] = y1;
+			mem[j++] = x1;
+			mem[j++] = y1;
+			x0 = x1;
 		}
 
 		const float yh = bounds.y + 0.5f*bounds.h;
 		nk_stroke_line(canvas, bounds.x, yh, bounds.x + bounds.w, yh, 1.f,
 			ctx->style.window.border_color);
-		nk_stroke_polyline(canvas, mem, PLOT_MAX, 1.f, plot_fg_color);
+		nk_stroke_polyline(canvas, mem, j/2, 1.f, plot_fg_color);
 		nk_push_scissor(canvas, old_clip);
 	}
 }
@@ -280,7 +285,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 			for(unsigned i = 0; i < CTRL_MAX; i++)
 			{
 				nk_layout_row_dynamic(ctx, dy*4, 1);
-				_draw_plot(ctx, handle->inp[i].vals, PLOT_MAX);
+				_draw_plot(ctx, handle->inp[i].vals);
 
 				nk_layout_row_dynamic(ctx, dy, 2);
 				if(i == 0) // calculate only once
@@ -476,7 +481,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 			for(unsigned i = 0; i < CTRL_MAX; i++)
 			{
 				nk_layout_row_dynamic(ctx, dy*4, 1);
-				_draw_plot(ctx, handle->outp[i].vals, PLOT_MAX);
+				_draw_plot(ctx, handle->outp[i].vals);
 
 				nk_layout_row_dynamic(ctx, dy, 2);
 				nk_labelf(ctx, NK_TEXT_LEFT, "Output %u: %+f", i, handle->out0[i]);
