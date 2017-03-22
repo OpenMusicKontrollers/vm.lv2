@@ -31,7 +31,8 @@
 #	undef Bool
 #endif
 
-#define PLOT_MAX 256
+#define PLOT_MAX  256
+#define PLOT_MASK (PLOT_MAX - 1)
 
 typedef struct _atom_ser_t atom_ser_t;
 typedef struct _plot_t plot_t;
@@ -674,7 +675,8 @@ port_event(LV2UI_Handle instance, uint32_t index, uint32_t size,
 							{
 								handle->inp[i].pre = frac;
 
-								const unsigned pre = floorf(intp);
+								unsigned pre = floorf(intp);
+								pre &= PLOT_MASK;
 								const unsigned post = PLOT_MAX - pre;
 
 								memcpy(mem, &handle->inp[i].vals[pre], sizeof(float)*post);
@@ -699,7 +701,8 @@ port_event(LV2UI_Handle instance, uint32_t index, uint32_t size,
 							{
 								handle->outp[i].pre = frac;
 
-								const unsigned pre = floorf(intp);
+								unsigned pre = floorf(intp);
+								pre &= PLOT_MASK;
 								const unsigned post = PLOT_MAX - pre;
 
 								memcpy(mem, &handle->outp[i].vals[pre], sizeof(float)*post);
