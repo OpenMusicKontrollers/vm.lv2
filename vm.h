@@ -43,10 +43,17 @@
 #define VM__graph             VM_PREFIX"graph"
 
 #define MAX_NPROPS 1
+
 #define CTRL_MAX   0x8
 #define CTRL_MASK  (CTRL_MAX - 1)
+
 #define ITEMS_MAX  128
 #define GRAPH_SIZE (ITEMS_MAX * sizeof(LV2_Atom_Long))
+
+#define VM_MIN -1.f
+#define VM_MAX 1.f
+#define VM_RNG (VM_MAX - VM_MIN)
+#define VM_VIS (VM_RNG * 1.1f)
 
 #include <props.lv2/props.h>
 

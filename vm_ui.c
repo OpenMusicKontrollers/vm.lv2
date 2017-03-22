@@ -192,11 +192,6 @@ _set_property(plughandle_t *handle, LV2_URID property)
 		handle->atom_eventTransfer, atom);
 }
 
-#define VM_MIN -0x2000
-#define VM_MAX 0x1fff
-#define VM_RNG (VM_MAX - VM_MIN)
-#define VM_VIS (VM_RNG * 1.1f)
-
 static inline void
 _draw_plot(struct nk_context *ctx, const float *vals, unsigned nvals)
 {

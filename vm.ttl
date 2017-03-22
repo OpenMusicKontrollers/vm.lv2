@@ -153,7 +153,7 @@ vm:vm
 		lv2:symbol "control" ;
 		lv2:name "Control" ;
 		lv2:designation lv2:control ;
-		rsz:minimumSize 4096;
+		rsz:minimumSize 8192 ;
 	] , [
 	  a lv2:OutputPort ,
 			atom:AtomPort ;
@@ -164,15 +164,15 @@ vm:vm
 		lv2:symbol "notify" ;
 		lv2:name "Notify" ;
 		lv2:designation lv2:control ;
-		rsz:minimumSize 4096 ;
+		rsz:minimumSize 8192 ;
 	] , [
 	  a lv2:InputPort,
 			lv2:ControlPort;
 		lv2:index 2 ;
 		lv2:symbol "control_in_0" ;
 		lv2:name "Control In 0" ;
-		lv2:minimum -8192;
-		lv2:maximum 8191;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
 		lv2:default 0.0;
 	] , [
 	  a lv2:InputPort,
@@ -180,8 +180,8 @@ vm:vm
 		lv2:index 3 ;
 		lv2:symbol "control_in_1" ;
 		lv2:name "Control In 1" ;
-		lv2:minimum -8192;
-		lv2:maximum 8191;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
 		lv2:default 0.0;
 	] , [
 	  a lv2:InputPort,
@@ -189,8 +189,8 @@ vm:vm
 		lv2:index 4 ;
 		lv2:symbol "control_in_2" ;
 		lv2:name "Control In 2" ;
-		lv2:minimum -8192;
-		lv2:maximum 8191;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
 		lv2:default 0.0;
 	] , [
 	  a lv2:InputPort,
@@ -198,8 +198,8 @@ vm:vm
 		lv2:index 5 ;
 		lv2:symbol "control_in_3" ;
 		lv2:name "Control In 3" ;
-		lv2:minimum -8192;
-		lv2:maximum 8191;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
 		lv2:default 0.0;
 	] , [
 	  a lv2:InputPort,
@@ -207,8 +207,8 @@ vm:vm
 		lv2:index 6 ;
 		lv2:symbol "control_in_4" ;
 		lv2:name "Control In 4" ;
-		lv2:minimum -8192;
-		lv2:maximum 8191;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
 		lv2:default 0.0;
 	] , [
 	  a lv2:InputPort,
@@ -216,8 +216,8 @@ vm:vm
 		lv2:index 7 ;
 		lv2:symbol "control_in_5" ;
 		lv2:name "Control In 5" ;
-		lv2:minimum -8192;
-		lv2:maximum 8191;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
 		lv2:default 0.0;
 	] , [
 	  a lv2:InputPort,
@@ -225,8 +225,8 @@ vm:vm
 		lv2:index 8 ;
 		lv2:symbol "control_in_6" ;
 		lv2:name "Control In 6" ;
-		lv2:minimum -8192;
-		lv2:maximum 8191;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
 		lv2:default 0.0;
 	] , [
 	  a lv2:InputPort,
@@ -234,8 +234,8 @@ vm:vm
 		lv2:index 9 ;
 		lv2:symbol "control_in_7" ;
 		lv2:name "Control In 7" ;
-		lv2:minimum -8192;
-		lv2:maximum 8191;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
 		lv2:default 0.0;
 	] , [
 	  a lv2:OutputPort,
@@ -243,64 +243,64 @@ vm:vm
 		lv2:index 10 ;
 		lv2:symbol "control_out_0" ;
 		lv2:name "Control Out 0" ;
-		lv2:minimum -8192;
-		lv2:maximum 8191;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
 	] , [
 	  a lv2:OutputPort,
 			lv2:ControlPort;
 		lv2:index 11 ;
 		lv2:symbol "control_out_1" ;
 		lv2:name "Control Out 1" ;
-		lv2:minimum -8192;
-		lv2:maximum 8191;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
 	] , [
 	  a lv2:OutputPort,
 			lv2:ControlPort;
 		lv2:index 12 ;
 		lv2:symbol "control_out_2" ;
 		lv2:name "Control Out 2" ;
-		lv2:minimum -8192;
-		lv2:maximum 8191;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
 	] , [
 	  a lv2:OutputPort,
 			lv2:ControlPort;
 		lv2:index 13 ;
 		lv2:symbol "control_out_3" ;
 		lv2:name "Control Out 3" ;
-		lv2:minimum -8192;
-		lv2:maximum 8191;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
 	] , [
 	  a lv2:OutputPort,
 			lv2:ControlPort;
 		lv2:index 14 ;
 		lv2:symbol "control_out_4" ;
 		lv2:name "Control Out 4" ;
-		lv2:minimum -8192;
-		lv2:maximum 8191;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
 	] , [
 	  a lv2:OutputPort,
 			lv2:ControlPort;
 		lv2:index 15 ;
 		lv2:symbol "control_out_5" ;
 		lv2:name "Control Out 5" ;
-		lv2:minimum -8192;
-		lv2:maximum 8191;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
 	] , [
 	  a lv2:OutputPort,
 			lv2:ControlPort;
 		lv2:index 16 ;
 		lv2:symbol "control_out_6" ;
 		lv2:name "Control Out 6" ;
-		lv2:minimum -8192;
-		lv2:maximum 8191;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
 	] , [
 	  a lv2:OutputPort,
 			lv2:ControlPort;
 		lv2:index 17 ;
 		lv2:symbol "control_out_7" ;
 		lv2:name "Control Out 7" ;
-		lv2:minimum -8192;
-		lv2:maximum 8191;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
 	] ;
 
 	#patch:writable
@@ -322,6 +322,96 @@ vm:vm
 		]
 	] .
 
+vm:add
+	a pset:Preset ;
+		lv2:appliesTo vm:vm ;
+		rdfs:label "Add" ;
+	state:state [
+		vm:graph [
+			a atom:Tuple ;
+			rdf:value (
+				0 vm:opInput
+				1 vm:opInput
+				vm:opAdd
+			)
+		]
+	] .
+
+vm:sub
+	a pset:Preset ;
+		lv2:appliesTo vm:vm ;
+		rdfs:label "Subtract" ;
+	state:state [
+		vm:graph [
+			a atom:Tuple ;
+			rdf:value (
+				0 vm:opInput
+				1 vm:opInput
+				vm:opSub
+			)
+		]
+	] .
+
+vm:mul
+	a pset:Preset ;
+		lv2:appliesTo vm:vm ;
+		rdfs:label "Multiply" ;
+	state:state [
+		vm:graph [
+			a atom:Tuple ;
+			rdf:value (
+				0 vm:opInput
+				1 vm:opInput
+				vm:opMul
+			)
+		]
+	] .
+
+vm:div
+	a pset:Preset ;
+		lv2:appliesTo vm:vm ;
+		rdfs:label "Divide" ;
+	state:state [
+		vm:graph [
+			a atom:Tuple ;
+			rdf:value (
+				0 vm:opInput
+				1 vm:opInput
+				vm:opDiv
+			)
+		]
+	] .
+
+vm:mod
+	a pset:Preset ;
+		lv2:appliesTo vm:vm ;
+		rdfs:label "Modulo" ;
+	state:state [
+		vm:graph [
+			a atom:Tuple ;
+			rdf:value (
+				0 vm:opInput
+				1 vm:opInput
+				vm:opMod
+			)
+		]
+	] .
+
+vm:pow
+	a pset:Preset ;
+		lv2:appliesTo vm:vm ;
+		rdfs:label "Power" ;
+	state:state [
+		vm:graph [
+			a atom:Tuple ;
+			rdf:value (
+				0 vm:opInput
+				1 vm:opInput
+				vm:opPow
+			)
+		]
+	] .
+
 vm:dBFS
 	a pset:Preset ;
 		lv2:appliesTo vm:vm ;
@@ -339,6 +429,27 @@ vm:dBFS
 				vm:opAbs
 				vm:opLog10
 				20.0 vm:opMul
+				70.0 vm:opDiv
+			)
+		]
+	] .
+
+vm:rand
+	a pset:Preset ;
+		lv2:appliesTo vm:vm ;
+		rdfs:label "Random" ;
+	state:state [
+		vm:graph [
+			a atom:Tuple ;
+			rdf:value (
+				vm:opRand
+				vm:opRand
+				vm:opRand
+				vm:opRand
+				vm:opRand
+				vm:opRand
+				vm:opRand
+				vm:opRand
 			)
 		]
 	] .
@@ -347,10 +458,6 @@ vm:lfo
 	a pset:Preset ;
 		lv2:appliesTo vm:vm ;
 		rdfs:label "LFO" ;
-	lv2:port [
-		lv2:symbol "control_in_0" ;
-		pset:value 10.0
-	] ;
 	state:state [
 		vm:graph [
 			a atom:Tuple ;
@@ -371,8 +478,8 @@ vm:lfo
 				0 vm:opLoad
 				0.75 vm:opLt
 				vm:opAnd
-				16383 vm:opMul
-				8191 vm:opSub
+				2.0 vm:opMul
+				1.0 vm:opSub
 
 				# TriangleLFO := (Phase > 0.5 ? (1.0 - Phase) : Phase) * 2.0
 				1.0
@@ -383,8 +490,8 @@ vm:lfo
 				0.5 vm:opGt
 				vm:opTernary
 				2.0 vm:opMul
-				16383 vm:opMul
-				8191 vm:opSub
+				2.0 vm:opMul
+				1.0 vm:opSub
 
 				# SineLFO := Sin( (Phase - 0.25) * 2.0 * PI) * 0.5 + 0.5
 				0 vm:opLoad
@@ -394,13 +501,13 @@ vm:lfo
 				vm:opSin
 				0.5 vm:opMul
 				0.5 vm:opAdd
-				16383 vm:opMul
-				8191 vm:opSub
+				2.0 vm:opMul
+				1.0 vm:opSub
 
 				# push phase
 				0 vm:opLoad
-				16383 vm:opMul
-				8191 vm:opSub
+				2.0 vm:opMul
+				1.0 vm:opSub
 			)
 		]
 	] .
