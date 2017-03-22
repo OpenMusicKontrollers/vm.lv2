@@ -353,6 +353,11 @@ run(LV2_Handle instance, uint32_t nsamples)
 							const num_t c = _stack_peek(&handle->stack);
 							_stack_push(&handle->stack, c);
 						} break;
+						case OP_POP:
+						{
+							const num_t c = _stack_pop(&handle->stack);
+							(void)c;
+						} break;
 						case OP_SWAP:
 						{
 							num_t ab [2];

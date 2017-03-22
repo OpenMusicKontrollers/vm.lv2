@@ -77,6 +77,7 @@ enum _vm_opcode_enum_t {
 
 	OP_CTRL,
 	OP_PUSH,
+	OP_POP,
 	OP_SWAP,
 	OP_STORE,
 	OP_LOAD,
@@ -180,8 +181,9 @@ struct _vm_command_t {
 
 struct _vm_api_def_t {
 	const char *uri;
-	const char *mnemo;
 	const char *label;
+	const char *mnemo;
+	char key;
 	unsigned npops;
 	unsigned npushs;
 };
@@ -196,7 +198,7 @@ struct _plugstate_t {
 
 static const char *command_labels [COMMAND_MAX] = {
 	[COMMAND_NOP]      = "",
-	[COMMAND_OPCODE]   = "Op Code",
+	[COMMAND_OPCODE]   = "Operation",
 	[COMMAND_BOOL]     = "Boolean",
 	[COMMAND_INT]      = "Integer",
 	[COMMAND_FLOAT]    = "Float",
@@ -207,6 +209,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opNop",
 		.label  = "",
 		.mnemo  = NULL,
+		.key    = '\0',
 		.npops  = 0,
 		.npushs = 0
 	},
@@ -215,6 +218,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opInput",
 		.label  = "input",
 		.mnemo  = NULL,
+		.key    = '\0',
 		.npops  = 1,
 		.npushs = 1
 	},
@@ -222,13 +226,23 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opPush",
 		.label  = "Push topmost value",
 		.mnemo  = "push",
+		.key    = '\0',
 		.npops  = 1,
 		.npushs = 2
+	},
+	[OP_POP] = {
+		.uri    = VM_PREFIX"opPop",
+		.label  = "Pop topmost value",
+		.mnemo  = "pop",
+		.key    = '\0',
+		.npops  = 1,
+		.npushs = 0
 	},
 	[OP_SWAP]  = {
 		.uri    = VM_PREFIX"opSwap",
 		.label  = "Swap 2 topmost values",
 		.mnemo  = "swap",
+		.key    = '\0',
 		.npops  = 2,
 		.npushs = 2
 	},
@@ -236,6 +250,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opStore",
 		.label  = "Store in register",
 		.mnemo  = "store",
+		.key    = '[',
 		.npops  = 2,
 		.npushs = 0
 	},
@@ -243,6 +258,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opLoad",
 		.label  = "Load from register",
 		.mnemo  = "load",
+		.key    = ']',
 		.npops  = 1,
 		.npushs = 1
 	},
@@ -251,6 +267,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opRand",
 		.label  = "Generate random number",
 		.mnemo  = "rand",
+		.key    = 'r',
 		.npops  = 0,
 		.npushs = 1
 	},
@@ -259,6 +276,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opAdd",
 		.label  = "Add",
 		.mnemo  = "+",
+		.key    = '+',
 		.npops  = 2,
 		.npushs = 1
 	},
@@ -266,6 +284,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opSub",
 		.label  = "Subtract",
 		.mnemo  = "-",
+		.key    = '-',
 		.npops  = 2,
 		.npushs = 1
 	},
@@ -273,6 +292,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opMul",
 		.label  = "Multiply",
 		.mnemo  = "*",
+		.key    = '*',
 		.npops  = 2,
 		.npushs = 1
 	},
@@ -280,6 +300,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opDiv",
 		.label  = "Divide",
 		.mnemo  = "/",
+		.key    = '/',
 		.npops  = 2,
 		.npushs = 1
 	},
@@ -287,6 +308,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opMod",
 		.label  = "Modulo",
 		.mnemo  = "%",
+		.key    = '%',
 		.npops  = 2,
 		.npushs = 1
 	},
@@ -294,6 +316,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opPow",
 		.label  = "Power",
 		.mnemo  = "^",
+		.key    = '^',
 		.npops  = 2,
 		.npushs = 1
 	},
@@ -302,6 +325,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opNeg",
 		.label  = "Negate",
 		.mnemo  = "neg",
+		.key    = 'n',
 		.npops  = 1,
 		.npushs = 1
 	},
@@ -309,6 +333,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opAbs",
 		.label  = "Absolute",
 		.mnemo  = "abs",
+		.key    = 'a',
 		.npops  = 1,
 		.npushs = 1
 	},
@@ -316,6 +341,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opSqrt",
 		.label  = "Square root",
 		.mnemo  = "sqrt",
+		.key    = '\0',
 		.npops  = 1,
 		.npushs = 1
 	},
@@ -323,6 +349,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opCbrt",
 		.label  = "Cubic root",
 		.mnemo  = "cbrt",
+		.key    = '\0',
 		.npops  = 1,
 		.npushs = 1
 	},
@@ -331,6 +358,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opFloor",
 		.label  = "Floor",
 		.mnemo  = "floor",
+		.key    = '\0',
 		.npops  = 1,
 		.npushs = 1
 	},
@@ -338,6 +366,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opCeil",
 		.label  = "Ceiling",
 		.mnemo  = "ceil",
+		.key    = '\0',
 		.npops  = 1,
 		.npushs = 1
 	},
@@ -345,6 +374,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opRound",
 		.label  = "Round",
 		.mnemo  = "round",
+		.key    = '\0',
 		.npops  = 1,
 		.npushs = 1
 	},
@@ -352,6 +382,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opRint",
 		.label  = "Rint",
 		.mnemo  = "rint",
+		.key    = '\0',
 		.npops  = 1,
 		.npushs = 1
 	},
@@ -359,6 +390,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opTrunc",
 		.label  = "Truncate",
 		.mnemo  = "trunc",
+		.key    = '\0',
 		.npops  = 1,
 		.npushs = 1
 	},
@@ -366,6 +398,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opModF",
 		.label  = "Break number into integer and fractional parts",
 		.mnemo  = "modf",
+		.key    = '\0',
 		.npops  = 1,
 		.npushs = 2
 	},
@@ -374,6 +407,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opExp",
 		.label  = "Exponential",
 		.mnemo  = "exp",
+		.key    = 'e',
 		.npops  = 1,
 		.npushs = 1
 	},
@@ -381,6 +415,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opExp2",
 		.label  = "Exponential base 2",
 		.mnemo  = "exp2",
+		.key    = '\0',
 		.npops  = 1,
 		.npushs = 1
 	},
@@ -388,6 +423,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opLDExp",
 		.label  = "Multiply number by 2 raised to a power",
 		.mnemo  = "ldexp",
+		.key    = '\0',
 		.npops  = 2,
 		.npushs = 1
 	},
@@ -395,6 +431,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opFRExp",
 		.label  = "Break number into significand and power of 2",
 		.mnemo  = "frexp",
+		.key    = '\0',
 		.npops  = 1,
 		.npushs = 2
 	},
@@ -402,6 +439,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opLog",
 		.label  = "Logarithm",
 		.mnemo  = "log",
+		.key    = 'l',
 		.npops  = 1,
 		.npushs = 1
 	},
@@ -409,6 +447,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opLog2",
 		.label  = "Logarithm base 2",
 		.mnemo  = "log2",
+		.key    = '\0',
 		.npops  = 1,
 		.npushs = 1
 	},
@@ -416,6 +455,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opLog10",
 		.label  = "Logarithm base 10",
 		.mnemo  = "log10",
+		.key    = '\0',
 		.npops  = 1,
 		.npushs = 1
 	},
@@ -424,6 +464,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opPi",
 		.label  = "Pi",
 		.mnemo  = "pi",
+		.key    = 'p',
 		.npops  = 0,
 		.npushs = 1
 	},
@@ -431,6 +472,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opSin",
 		.label  = "Sinus",
 		.mnemo  = "sin",
+		.key    = 's',
 		.npops  = 1,
 		.npushs = 1
 	},
@@ -438,6 +480,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opCos",
 		.label  = "Cosinus",
 		.mnemo  = "cos",
+		.key    = 'c',
 		.npops  = 1,
 		.npushs = 1
 	},
@@ -445,6 +488,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opTan",
 		.label  = "Tangens",
 		.mnemo  = "tan",
+		.key    = 't',
 		.npops  = 1,
 		.npushs = 1
 	},
@@ -452,6 +496,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opASin",
 		.label  = "Arcus Sinus",
 		.mnemo  = "asin",
+		.key    = '\0',
 		.npops  = 1,
 		.npushs = 1
 	},
@@ -459,6 +504,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opACos",
 		.label  = "Arcus Cosinus",
 		.mnemo  = "acos",
+		.key    = '\0',
 		.npops  = 1,
 		.npushs = 1
 	},
@@ -466,6 +512,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opATan",
 		.label  = "Arcus Tangens",
 		.mnemo  = "atan",
+		.key    = '\0',
 		.npops  = 1,
 		.npushs = 1
 	},
@@ -473,6 +520,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opATan2",
 		.label  = "Arcus Tangens using quadrants",
 		.mnemo  = "atan2",
+		.key    = '\0',
 		.npops  = 2,
 		.npushs = 1
 	},
@@ -480,6 +528,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opSinH",
 		.label  = "Sinus Hyperbolicus",
 		.mnemo  = "sinh",
+		.key    = '\0',
 		.npops  = 1,
 		.npushs = 1
 	},
@@ -487,6 +536,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opCosH",
 		.label  = "Cosinus Hyperbolicus",
 		.mnemo  = "cosh",
+		.key    = '\0',
 		.npops  = 1,
 		.npushs = 1
 	},
@@ -494,6 +544,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opTanH",
 		.label  = "Tangens Hyperbolicus",
 		.mnemo  = "tanh",
+		.key    = '\0',
 		.npops  = 1,
 		.npushs = 1
 	},
@@ -501,6 +552,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opASinH",
 		.label  = "Arcus Sinus Hyperbolicus",
 		.mnemo  = "asinh",
+		.key    = '\0',
 		.npops  = 1,
 		.npushs = 1
 	},
@@ -508,6 +560,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opACosH",
 		.label  = "Arcus Cosinus Hyperbolicus",
 		.mnemo  = "acosh",
+		.key    = '\0',
 		.npops  = 1,
 		.npushs = 1
 	},
@@ -515,6 +568,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opATanH",
 		.label  = "Arcus Tangens Hyperbolicus",
 		.mnemo  = "atanh",
+		.key    = '\0',
 		.npops  = 1,
 		.npushs = 1
 	},
@@ -523,6 +577,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opEq",
 		.label  = "Equal",
 		.mnemo  = "==",
+		.key    = '=',
 		.npops  = 2,
 		.npushs = 1
 	},
@@ -530,6 +585,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opLt",
 		.label  = "Less than",
 		.mnemo  = "<",
+		.key    = '<',
 		.npops  = 2,
 		.npushs = 1
 	},
@@ -537,6 +593,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opGt",
 		.label  = "Greater than",
 		.mnemo  = ">",
+		.key    = '>',
 		.npops  = 2,
 		.npushs = 1
 	},
@@ -544,6 +601,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opLe",
 		.label  = "Less or equal",
 		.mnemo  = "<=",
+		.key    = '\0',
 		.npops  = 2,
 		.npushs = 1
 	},
@@ -551,6 +609,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opGe",
 		.label  = "Greater or equal",
 		.mnemo  = ">=",
+		.key    = '\0',
 		.npops  = 2,
 		.npushs = 1
 	},
@@ -558,6 +617,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opTernary",
 		.label  = "Ternary operator",
 		.mnemo  = "?",
+		.key    = '?',
 		.npops  = 3,
 		.npushs = 1
 	},
@@ -565,6 +625,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opMin",
 		.label  = "Minimum",
 		.mnemo  = "min",
+		.key    = '{',
 		.npops  = 2,
 		.npushs = 1
 	},
@@ -572,6 +633,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opMax",
 		.label  = "Maximum",
 		.mnemo  = "max",
+		.key    = '}',
 		.npops  = 2,
 		.npushs = 1
 	},
@@ -580,6 +642,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opAnd",
 		.label  = "And",
 		.mnemo  = "&&",
+		.key    = '\0',
 		.npops  = 2,
 		.npushs = 1
 	},
@@ -587,6 +650,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opOr",
 		.label  = "Or",
 		.mnemo  = "||",
+		.key    = '\0',
 		.npops  = 2,
 		.npushs = 1
 	},
@@ -594,6 +658,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opNot",
 		.label  = "Not",
 		.mnemo  = "!",
+		.key    = '!',
 		.npops  = 1,
 		.npushs = 1
 	},
@@ -602,6 +667,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opBAnd",
 		.label  = "Bitwise and",
 		.mnemo  = "&",
+		.key    = '&',
 		.npops  = 2,
 		.npushs = 1
 	},
@@ -609,6 +675,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opBOr",
 		.label  = "Bitwise or",
 		.mnemo  = "|",
+		.key    = '|',
 		.npops  = 2,
 		.npushs = 1
 	},
@@ -616,6 +683,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opBNot",
 		.label  = "Bitwise not",
 		.mnemo  = "~",
+		.key    = '~',
 		.npops  = 1,
 		.npushs = 1
 	},
@@ -623,6 +691,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opLShift",
 		.label  = "Left shift",
 		.mnemo  = "<<",
+		.key    = '\0',
 		.npops  = 2,
 		.npushs = 1
 	},
@@ -630,6 +699,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = VM_PREFIX"opRShift",
 		.label  = "Right shift",
 		.mnemo  = ">>",
+		.key    = '\0',
 		.npops  = 2,
 		.npushs = 1
 	},
@@ -638,6 +708,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = LV2_TIME__barBeat,
 		.label  = "time:barBeat",
 		.mnemo  = NULL,
+		.key    = '\0',
 		.npops  = 0,
 		.npushs = 1
 	},
@@ -645,6 +716,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = LV2_TIME__bar,
 		.label  = "time:bar",
 		.mnemo  = NULL,
+		.key    = '\0',
 		.npops  = 0,
 		.npushs = 1
 	},
@@ -652,6 +724,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = LV2_TIME__beat,
 		.label  = "time:beat",
 		.mnemo  = NULL,
+		.key    = '\0',
 		.npops  = 0,
 		.npushs = 1
 	},
@@ -659,6 +732,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = LV2_TIME__beatUnit,
 		.label  = "time:beatUnit",
 		.mnemo  = NULL,
+		.key    = '\0',
 		.npops  = 0,
 		.npushs = 1
 	},
@@ -666,6 +740,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = LV2_TIME__beatsPerBar,
 		.label  = "time:beatsPerBar",
 		.mnemo  = NULL,
+		.key    = '\0',
 		.npops  = 0,
 		.npushs = 1
 	},
@@ -673,6 +748,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = LV2_TIME__beatsPerMinute,
 		.label  = "time:beatsPerMinute",
 		.mnemo  = NULL,
+		.key    = '\0',
 		.npops  = 0,
 		.npushs = 1
 	},
@@ -680,6 +756,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = LV2_TIME__frame,
 		.label  = "time:frame",
 		.mnemo  = NULL,
+		.key    = '\0',
 		.npops  = 0,
 		.npushs = 1
 	},
@@ -687,6 +764,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = LV2_TIME__framesPerSecond,
 		.label  = "time:framesPerSecond",
 		.mnemo  = NULL,
+		.key    = '\0',
 		.npops  = 0,
 		.npushs = 1
 	},
@@ -694,6 +772,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.uri    = LV2_TIME__speed,
 		.label  = "time:speed",
 		.mnemo  = NULL,
+		.key    = '\0',
 		.npops  = 0,
 		.npushs = 1
 	},

@@ -60,6 +60,8 @@ vm:opInput
 	a rdfs:Datatype .
 vm:opPush
 	a rdfs:Datatype .
+vm:opPop
+	a rdfs:Datatype .
 vm:opSwap
 	a rdfs:Datatype .
 vm:opStore
@@ -503,6 +505,25 @@ vm:rand
 				vm:opRand
 				vm:opRand
 				vm:opRand
+			)
+		]
+	] .
+
+vm:sampleAndHold
+	a pset:Preset ;
+		lv2:appliesTo vm:vm ;
+		rdfs:label "Sample and hold" ;
+	state:state [
+		vm:graph [
+			a atom:Tuple ;
+			rdf:value (
+				# Reg0 := (Beat % 1 == 0) ? Rand : Reg0
+				vm:opRand
+				0 vm:opLoad
+				time:barBeat vm:opModF vm:opPop
+				0 vm:opEq vm:opTernary
+				vm:opPush
+				0 vm:opStore
 			)
 		]
 	] .

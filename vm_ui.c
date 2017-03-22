@@ -376,7 +376,60 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 					} break;
 					case COMMAND_NOP:
 					{
-						terminate = true;
+						struct nk_keyboard *keybd = &ctx->input.keyboard;
+
+						if(keybd->text_len == 1)
+						{
+							const char key = keybd->text[0];
+
+							switch(key)
+							{
+								case 'o':
+								{
+									cmd->type = COMMAND_OPCODE;
+									cmd->op = OP_NOP;
+								}	break;
+								case 'b':
+								{
+									cmd->type = COMMAND_BOOL;
+									cmd->i32 = 0;
+								}	break;
+								case 'i':
+								{
+									cmd->type = COMMAND_INT;
+									cmd->i32 = 0;
+								}	break;
+								case 'f':
+								{
+									cmd->type = COMMAND_FLOAT;
+									cmd->f32= 0;
+								}	break;
+
+								default:
+								{
+									terminate = true;
+
+									for(unsigned op = 0; op < OP_MAX; op++)
+									{
+										if(vm_api_def[op].key == key)
+										{
+											cmd->type = COMMAND_OPCODE;
+											cmd->op = op;
+											terminate = false;
+											break;
+										}
+									}
+								}	break;
+							}
+
+							if(!terminate)
+							{
+								keybd->text_len = 0;
+								sync = true;
+							}
+						}
+						else
+							terminate = true;
 					} break;
 					case COMMAND_MAX:
 						break;
