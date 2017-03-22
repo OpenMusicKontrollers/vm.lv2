@@ -50,6 +50,7 @@
 
 #include <props.lv2/props.h>
 
+typedef enum _vm_status_t vm_status_t;
 typedef enum _opcode_enum_t opcode_enum_t;
 typedef enum _command_enum_t command_enum_t;
 typedef struct _command_t command_t;
@@ -67,6 +68,12 @@ struct _vm_api_def_t {
 
 struct _vm_api_impl_t {
 	LV2_URID urid;
+};
+
+enum _vm_status_t {
+	VM_STATUS_STATIC   = (0 << 0),
+	VM_STATUS_HAS_TIME = (1 << 1),
+	VM_STATUS_HAS_RAND = (1 << 2),
 };
 
 enum _opcode_enum_t{
@@ -582,14 +589,14 @@ vm_serialize(vm_api_impl_t *impl, LV2_Atom_Forge *forge, const command_t *cmds)
 	return ref;
 }
 
-static inline bool
+static inline vm_status_t
 vm_deserialize(vm_api_impl_t *impl, LV2_Atom_Forge *forge,
 	command_t *cmds, uint32_t size, const LV2_Atom *body)
 {
 	command_t *cmd = cmds;
 	memset(cmds, 0x0, sizeof(command_t)*ITEMS_MAX);
 
-	bool is_dynamic = false;
+	vm_status_t state = VM_STATUS_STATIC;
 
 	LV2_ATOM_TUPLE_BODY_FOREACH(body, size, item)
 	{
@@ -633,10 +640,13 @@ vm_deserialize(vm_api_impl_t *impl, LV2_Atom_Forge *forge,
 				|| (cmd->op == OP_BPM)
 				|| (cmd->op == OP_FRAME)
 				//|| (cmd->op == OP_FPS) // is constant
-				|| (cmd->op == OP_SPEED)
-				|| (cmd->op == OP_RAND) )
+				|| (cmd->op == OP_SPEED) )
 			{
-				is_dynamic = true;
+				state |= VM_STATUS_HAS_TIME;
+			}
+			else if(cmd->op == OP_RAND)
+			{
+				state |= VM_STATUS_HAS_RAND;
 			}
 		}
 		else
@@ -650,7 +660,7 @@ vm_deserialize(vm_api_impl_t *impl, LV2_Atom_Forge *forge,
 			break;
 	}
 
-	return is_dynamic;
+	return state;
 }
 
 #endif // _VM_LV2_H
