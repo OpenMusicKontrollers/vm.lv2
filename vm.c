@@ -355,6 +355,33 @@ run(LV2_Handle instance, uint32_t nsamples)
 							const num_t c = _stack_peek(&handle->stack);
 							_stack_push(&handle->stack, c);
 						} break;
+						case OP_SWAP:
+						{
+							num_t ab [2];
+							_stack_pop_num(&handle->stack, ab, 2);
+							_stack_push_num(&handle->stack, ab, 2);
+						} break;
+						case OP_STORE:
+						{
+							num_t ab [2];
+							_stack_pop_num(&handle->stack, ab, 2);
+							const int idx = floorf(ab[0]);
+							handle->stack.regs[idx & REG_MASK] = ab[1];
+						} break;
+						case OP_LOAD:
+						{
+							const num_t a = _stack_pop(&handle->stack);
+							const int idx = floorf(a);
+							const num_t c = handle->stack.regs[idx & REG_MASK];
+							_stack_push(&handle->stack, c);
+						} break;
+
+						case OP_RAND:
+						{
+							const num_t c = (num_t)rand() / RAND_MAX;
+							_stack_push(&handle->stack, c);
+						} break;
+
 						case OP_ADD:
 						{
 							num_t ab [2];
@@ -385,6 +412,23 @@ run(LV2_Handle instance, uint32_t nsamples)
 								: ab[1] / ab[0];
 							_stack_push(&handle->stack, c);
 						} break;
+						case OP_MOD:
+						{
+							num_t ab [2];
+							_stack_pop_num(&handle->stack, ab, 2);
+							const num_t c = ab[0] == 0.0
+								? 0.0
+								: fmod(ab[1], ab[0]);
+							_stack_push(&handle->stack, c);
+						} break;
+						case OP_POW:
+						{
+							num_t ab [2];
+							_stack_pop_num(&handle->stack, ab, 2);
+							const num_t c = pow(ab[1], ab[0]);
+							_stack_push(&handle->stack, c);
+						} break;
+
 						case OP_NEG:
 						{
 							const num_t a = _stack_pop(&handle->stack);
@@ -397,28 +441,13 @@ run(LV2_Handle instance, uint32_t nsamples)
 							const num_t c = fabs(a);
 							_stack_push(&handle->stack, c);
 						} break;
-						case OP_POW:
-						{
-							num_t ab [2];
-							_stack_pop_num(&handle->stack, ab, 2);
-							const num_t c = pow(ab[1], ab[0]);
-							_stack_push(&handle->stack, c);
-						} break;
 						case OP_SQRT:
 						{
 							const num_t a = _stack_pop(&handle->stack);
 							const num_t c = sqrt(a);
 							_stack_push(&handle->stack, c);
 						} break;
-						case OP_MOD:
-						{
-							num_t ab [2];
-							_stack_pop_num(&handle->stack, ab, 2);
-							const num_t c = ab[0] == 0.0
-								? 0.0
-								: fmod(ab[1], ab[0]);
-							_stack_push(&handle->stack, c);
-						} break;
+
 						case OP_EXP:
 						{
 							const num_t a = _stack_pop(&handle->stack);
@@ -449,6 +478,7 @@ run(LV2_Handle instance, uint32_t nsamples)
 							const num_t c = log10(a);
 							_stack_push(&handle->stack, c);
 						} break;
+
 						case OP_SIN:
 						{
 							const num_t a = _stack_pop(&handle->stack);
@@ -461,17 +491,12 @@ run(LV2_Handle instance, uint32_t nsamples)
 							const num_t c = cos(a);
 							_stack_push(&handle->stack, c);
 						} break;
-						case OP_SWAP:
-						{
-							num_t ab [2];
-							_stack_pop_num(&handle->stack, ab, 2);
-							_stack_push_num(&handle->stack, ab, 2);
-						} break;
 						case OP_PI:
 						{
 							num_t c = M_PI;
 							_stack_push(&handle->stack, c);
 						} break;
+
 						case OP_EQ:
 						{
 							num_t ab [2];
@@ -507,6 +532,14 @@ run(LV2_Handle instance, uint32_t nsamples)
 							const bool c = ab[1] >= ab[0];
 							_stack_push(&handle->stack, c);
 						} break;
+						case OP_TER:
+						{
+							num_t ab [3];
+							_stack_pop_num(&handle->stack, ab, 3);
+							const bool c = ab[0];
+							_stack_push(&handle->stack, c ? ab[2] : ab[1]);
+						} break;
+
 						case OP_AND:
 						{
 							num_t ab [2];
@@ -567,32 +600,6 @@ run(LV2_Handle instance, uint32_t nsamples)
 							const unsigned a = ab[1];
 							const unsigned b = ab[0];
 							const unsigned c = a >>  b;
-							_stack_push(&handle->stack, c);
-						} break;
-						case OP_TER:
-						{
-							num_t ab [3];
-							_stack_pop_num(&handle->stack, ab, 3);
-							const bool c = ab[0];
-							_stack_push(&handle->stack, c ? ab[2] : ab[1]);
-						} break;
-						case OP_STORE:
-						{
-							num_t ab [2];
-							_stack_pop_num(&handle->stack, ab, 2);
-							const int idx = floorf(ab[0]);
-							handle->stack.regs[idx & REG_MASK] = ab[1];
-						} break;
-						case OP_LOAD:
-						{
-							const num_t a = _stack_pop(&handle->stack);
-							const int idx = floorf(a);
-							const num_t c = handle->stack.regs[idx & REG_MASK];
-							_stack_push(&handle->stack, c);
-						} break;
-						case OP_RAND:
-						{
-							const num_t c = (num_t)rand() / RAND_MAX;
 							_stack_push(&handle->stack, c);
 						} break;
 

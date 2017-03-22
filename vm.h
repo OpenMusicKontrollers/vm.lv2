@@ -77,41 +77,50 @@ enum _vm_opcode_enum_t {
 
 	OP_CTRL,
 	OP_PUSH,
+	OP_SWAP,
+	OP_STORE,
+	OP_LOAD,
+
+	OP_RAND,
+
 	OP_ADD,
 	OP_SUB,
 	OP_MUL,
 	OP_DIV,
+	OP_MOD,
+	OP_POW,
+
 	OP_NEG,
 	OP_ABS,
-	OP_POW,
 	OP_SQRT,
-	OP_MOD,
+
 	OP_EXP,
 	OP_EXP_2,
 	OP_LOG,
 	OP_LOG_2,
 	OP_LOG_10,
+
 	OP_SIN,
 	OP_COS,
-	OP_SWAP,
 	OP_PI,
+
 	OP_EQ,
 	OP_LT,
 	OP_GT,
 	OP_LE,
 	OP_GE,
+	OP_TER,
+
 	OP_AND,
 	OP_OR,
 	OP_NOT,
+
 	OP_BAND,
 	OP_BOR,
 	OP_BNOT,
 	OP_LSHIFT,
 	OP_RSHIFT,
-	OP_TER,
-	OP_STORE,
-	OP_LOAD,
-	OP_RAND,
+
 	OP_BAR_BEAT,
 	OP_BAR,
 	OP_BEAT,
@@ -141,9 +150,7 @@ struct _vm_command_t {
 
 	union {
 		int32_t i32;
-		int64_t i64;
 		float f32;
-		double f64;
 		vm_opcode_enum_t op;
 	};
 };
@@ -165,11 +172,11 @@ struct _plugstate_t {
 };
 
 static const char *command_labels [COMMAND_MAX] = {
-	[COMMAND_NOP]    = "",
-	[COMMAND_OPCODE] = "Op Code"	,
-	[COMMAND_BOOL]   = "Boolean"	,
-	[COMMAND_INT]    = "Integer"	,
-	[COMMAND_FLOAT]  = "Float"	,
+	[COMMAND_NOP]      = "",
+	[COMMAND_OPCODE]   = "Op Code",
+	[COMMAND_BOOL]     = "Boolean",
+	[COMMAND_INT]      = "Integer",
+	[COMMAND_FLOAT]    = "Float",
 };
 
 static const vm_api_def_t vm_api_def [OP_MAX] = {
@@ -180,6 +187,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.npops  = 0,
 		.npushs = 0
 	},
+
 	[OP_CTRL] = {
 		.uri    = VM_PREFIX"opInput",
 		.label  = "input",
@@ -194,6 +202,36 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.npops  = 1,
 		.npushs = 2
 	},
+	[OP_SWAP]  = {
+		.uri    = VM_PREFIX"opSwap",
+		.label  = "Swap",
+		.mnemo  = "swap",
+		.npops  = 2,
+		.npushs = 2
+	},
+	[OP_STORE]  = {
+		.uri    = VM_PREFIX"opStore",
+		.label  = "Store in register",
+		.mnemo  = "store",
+		.npops  = 2,
+		.npushs = 0
+	},
+	[OP_LOAD]  = {
+		.uri    = VM_PREFIX"opLoad",
+		.label  = "Load from register",
+		.mnemo  = "load",
+		.npops  = 1,
+		.npushs = 1
+	},
+
+	[OP_RAND]  = {
+		.uri    = VM_PREFIX"opRand",
+		.label  = "Random number",
+		.mnemo  = "rand",
+		.npops  = 0,
+		.npushs = 1
+	},
+
 	[OP_ADD]  = {
 		.uri    = VM_PREFIX"opAdd",
 		.label  = "Add",
@@ -222,6 +260,21 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.npops  = 2,
 		.npushs = 1
 	},
+	[OP_MOD]  = {
+		.uri    = VM_PREFIX"opMod",
+		.label  = "Modulo",
+		.mnemo  = "%",
+		.npops  = 2,
+		.npushs = 1
+	},
+	[OP_POW]  = {
+		.uri    = VM_PREFIX"opPow",
+		.label  = "Power",
+		.mnemo  = "^",
+		.npops  = 2,
+		.npushs = 1
+	},
+
 	[OP_NEG]  = {
 		.uri    = VM_PREFIX"opNeg",
 		.label  = "Negate",
@@ -236,13 +289,6 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.npops  = 1,
 		.npushs = 1
 	},
-	[OP_POW]  = {
-		.uri    = VM_PREFIX"opPow",
-		.label  = "Power",
-		.mnemo  = "^",
-		.npops  = 2,
-		.npushs = 1
-	},
 	[OP_SQRT]  = {
 		.uri    = VM_PREFIX"opSqrt",
 		.label  = "Square root",
@@ -250,13 +296,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.npops  = 1,
 		.npushs = 1
 	},
-	[OP_MOD]  = {
-		.uri    = VM_PREFIX"opMod",
-		.label  = "Modulo",
-		.mnemo  = "%",
-		.npops  = 2,
-		.npushs = 1
-	},
+
 	[OP_EXP]  = {
 		.uri    = VM_PREFIX"opExp",
 		.label  = "Exponential",
@@ -292,6 +332,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.npops  = 1,
 		.npushs = 1
 	},
+
 	[OP_SIN]  = {
 		.uri    = VM_PREFIX"opSin",
 		.label  = "Sinus",
@@ -306,13 +347,6 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.npops  = 1,
 		.npushs = 1
 	},
-	[OP_SWAP]  = {
-		.uri    = VM_PREFIX"opSwap",
-		.label  = "Swap",
-		.mnemo  = "swap",
-		.npops  = 2,
-		.npushs = 2
-	},
 	[OP_PI]  = {
 		.uri    = VM_PREFIX"opPi",
 		.label  = "Pi",
@@ -320,6 +354,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.npops  = 0,
 		.npushs = 1
 	},
+
 	[OP_EQ]  = {
 		.uri    = VM_PREFIX"opEq",
 		.label  = "Equal",
@@ -355,6 +390,14 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.npops  = 2,
 		.npushs = 1
 	},
+	[OP_TER]  = {
+		.uri    = VM_PREFIX"opTernary",
+		.label  = "Ternary operator",
+		.mnemo  = "?",
+		.npops  = 3,
+		.npushs = 1
+	},
+
 	[OP_AND]  = {
 		.uri    = VM_PREFIX"opAnd",
 		.label  = "And",
@@ -376,6 +419,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.npops  = 1,
 		.npushs = 1
 	},
+
 	[OP_BAND]  = {
 		.uri    = VM_PREFIX"opBAnd",
 		.label  = "Bitwise and",
@@ -411,34 +455,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.npops  = 2,
 		.npushs = 1
 	},
-	[OP_TER]  = {
-		.uri    = VM_PREFIX"opTernary",
-		.label  = "Ternary operator",
-		.mnemo  = "?",
-		.npops  = 3,
-		.npushs = 1
-	},
-	[OP_STORE]  = {
-		.uri    = VM_PREFIX"opStore",
-		.label  = "Store in register",
-		.mnemo  = "store",
-		.npops  = 2,
-		.npushs = 0
-	},
-	[OP_LOAD]  = {
-		.uri    = VM_PREFIX"opLoad",
-		.label  = "Load from register",
-		.mnemo  = "load",
-		.npops  = 1,
-		.npushs = 1
-	},
-	[OP_RAND]  = {
-		.uri    = VM_PREFIX"opRand",
-		.label  = "Random number",
-		.mnemo  = "rand",
-		.npops  = 0,
-		.npushs = 1
-	},
+
 	[OP_BAR_BEAT]  = {
 		.uri    = LV2_TIME__barBeat,
 		.label  = "time:barBeat",
@@ -609,7 +626,7 @@ vm_deserialize(vm_api_impl_t *impl, LV2_Atom_Forge *forge,
 		else if(item->type == forge->Long)
 		{
 			cmd->type = COMMAND_INT;
-			cmd->i64 = ((const LV2_Atom_Long *)item)->body;
+			cmd->i32 = ((const LV2_Atom_Long *)item)->body;
 		}
 		else if(item->type == forge->Float)
 		{
@@ -619,7 +636,7 @@ vm_deserialize(vm_api_impl_t *impl, LV2_Atom_Forge *forge,
 		else if(item->type == forge->Double)
 		{
 			cmd->type = COMMAND_FLOAT;
-			cmd->f64 = ((const LV2_Atom_Double *)item)->body;
+			cmd->f32 = ((const LV2_Atom_Double *)item)->body;
 		}
 		else if(item->type == forge->URID)
 		{
