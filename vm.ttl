@@ -47,7 +47,7 @@ omk:me
 proj:vm
 	a doap:Project ;
 	doap:maintainer omk:me ;
-	doap:name "Vm Bundle" .
+	doap:name "VM Bundle" .
 
 # Parameters
 vm:graph
@@ -194,7 +194,7 @@ vm:opRShift
 vm:control
 	a lv2:Plugin,
 		lv2:ConverterPlugin ;
-	doap:name "Vm" ;
+	doap:name "VM Control" ;
 	doap:license lic:Artistic-2.0 ;
 	lv2:project proj:vm ;
 	lv2:requiredFeature urid:map, work:schedule, state:loadDefaultState ;
@@ -205,8 +205,7 @@ vm:control
 	  a lv2:InputPort ,
 			atom:AtomPort ;
 		atom:bufferType atom:Sequence ;
-		atom:supports midi:MidiEvent ,
-	 		time:Position	,
+		atom:supports time:Position	,
 			patch:Message ;
 		lv2:index 0 ;
 		lv2:symbol "control" ;
@@ -217,8 +216,7 @@ vm:control
 	  a lv2:OutputPort ,
 			atom:AtomPort ;
 		atom:bufferType atom:Sequence ;
-		atom:supports midi:MidiEvent ,
-			patch:Message ;
+		atom:supports patch:Message ;
 		lv2:index 1 ;
 		lv2:symbol "notify" ;
 		lv2:name "Notify" ;
@@ -381,10 +379,390 @@ vm:control
 		]
 	] .
 
+# Plugin
+vm:cv
+	a lv2:Plugin,
+		lv2:ConverterPlugin ;
+	doap:name "VM CV" ;
+	doap:license lic:Artistic-2.0 ;
+	lv2:project proj:vm ;
+	lv2:requiredFeature urid:map, work:schedule, state:loadDefaultState ;
+	lv2:optionalFeature lv2:isLive, lv2:hardRTCapable, log:log, state:threadSafeRestore ;
+	lv2:extensionData state:interface, work:interface ;
+
+	lv2:port [
+	  a lv2:InputPort ,
+			atom:AtomPort ;
+		atom:bufferType atom:Sequence ;
+		atom:supports time:Position	,
+			patch:Message ;
+		lv2:index 0 ;
+		lv2:symbol "control" ;
+		lv2:name "Control" ;
+		lv2:designation lv2:control ;
+		rsz:minimumSize 8192 ;
+	] , [
+	  a lv2:OutputPort ,
+			atom:AtomPort ;
+		atom:bufferType atom:Sequence ;
+		atom:supports patch:Message ;
+		lv2:index 1 ;
+		lv2:symbol "notify" ;
+		lv2:name "Notify" ;
+		lv2:designation lv2:control ;
+		rsz:minimumSize 8192 ;
+	] , [
+	  a lv2:InputPort,
+			lv2:CVPort;
+		lv2:index 2 ;
+		lv2:symbol "cv_in_0" ;
+		lv2:name "CV In 0" ;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
+		lv2:default 0.0;
+	] , [
+	  a lv2:InputPort,
+			lv2:CVPort;
+		lv2:index 3 ;
+		lv2:symbol "cv_in_1" ;
+		lv2:name "CV In 1" ;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
+		lv2:default 0.0;
+	] , [
+	  a lv2:InputPort,
+			lv2:CVPort;
+		lv2:index 4 ;
+		lv2:symbol "cv_in_2" ;
+		lv2:name "CV In 2" ;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
+		lv2:default 0.0;
+	] , [
+	  a lv2:InputPort,
+			lv2:CVPort;
+		lv2:index 5 ;
+		lv2:symbol "cv_in_3" ;
+		lv2:name "CV In 3" ;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
+		lv2:default 0.0;
+	] , [
+	  a lv2:InputPort,
+			lv2:CVPort;
+		lv2:index 6 ;
+		lv2:symbol "cv_in_4" ;
+		lv2:name "CV In 4" ;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
+		lv2:default 0.0;
+	] , [
+	  a lv2:InputPort,
+			lv2:CVPort;
+		lv2:index 7 ;
+		lv2:symbol "cv_in_5" ;
+		lv2:name "CV In 5" ;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
+		lv2:default 0.0;
+	] , [
+	  a lv2:InputPort,
+			lv2:CVPort;
+		lv2:index 8 ;
+		lv2:symbol "cv_in_6" ;
+		lv2:name "CV In 6" ;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
+		lv2:default 0.0;
+	] , [
+	  a lv2:InputPort,
+			lv2:CVPort;
+		lv2:index 9 ;
+		lv2:symbol "cv_in_7" ;
+		lv2:name "CV In 7" ;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
+		lv2:default 0.0;
+	] , [
+	  a lv2:OutputPort,
+			lv2:CVPort;
+		lv2:index 10 ;
+		lv2:symbol "cv_out_0" ;
+		lv2:name "CV Out 0" ;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
+	] , [
+	  a lv2:OutputPort,
+			lv2:CVPort;
+		lv2:index 11 ;
+		lv2:symbol "cv_out_1" ;
+		lv2:name "CV Out 1" ;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
+	] , [
+	  a lv2:OutputPort,
+			lv2:CVPort;
+		lv2:index 12 ;
+		lv2:symbol "cv_out_2" ;
+		lv2:name "CV Out 2" ;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
+	] , [
+	  a lv2:OutputPort,
+			lv2:CVPort;
+		lv2:index 13 ;
+		lv2:symbol "cv_out_3" ;
+		lv2:name "CV Out 3" ;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
+	] , [
+	  a lv2:OutputPort,
+			lv2:CVPort;
+		lv2:index 14 ;
+		lv2:symbol "cv_out_4" ;
+		lv2:name "CV Out 4" ;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
+	] , [
+	  a lv2:OutputPort,
+			lv2:CVPort;
+		lv2:index 15 ;
+		lv2:symbol "cv_out_5" ;
+		lv2:name "CV Out 5" ;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
+	] , [
+	  a lv2:OutputPort,
+			lv2:CVPort;
+		lv2:index 16 ;
+		lv2:symbol "cv_out_6" ;
+		lv2:name "CV Out 6" ;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
+	] , [
+	  a lv2:OutputPort,
+			lv2:CVPort;
+		lv2:index 17 ;
+		lv2:symbol "cv_out_7" ;
+		lv2:name "CV Out 7" ;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
+	] ;
+
+	#patch:writable
+	#	vm:graph ;
+
+	state:state [
+		vm:graph [
+			a atom:Tuple ;
+			rdf:value (
+				7 vm:opInput
+				6 vm:opInput
+				5 vm:opInput
+				4 vm:opInput
+				3 vm:opInput
+				2 vm:opInput
+				1 vm:opInput
+				0 vm:opInput
+			)
+		]
+	] .
+
+# Plugin
+vm:audio
+	a lv2:Plugin,
+		lv2:ConverterPlugin ;
+	doap:name "VM Audio" ;
+	doap:license lic:Artistic-2.0 ;
+	lv2:project proj:vm ;
+	lv2:requiredFeature urid:map, work:schedule, state:loadDefaultState ;
+	lv2:optionalFeature lv2:isLive, lv2:hardRTCapable, log:log, state:threadSafeRestore ;
+	lv2:extensionData state:interface, work:interface ;
+
+	lv2:port [
+	  a lv2:InputPort ,
+			atom:AtomPort ;
+		atom:bufferType atom:Sequence ;
+		atom:supports time:Position	,
+			patch:Message ;
+		lv2:index 0 ;
+		lv2:symbol "control" ;
+		lv2:name "Control" ;
+		lv2:designation lv2:control ;
+		rsz:minimumSize 8192 ;
+	] , [
+	  a lv2:OutputPort ,
+			atom:AtomPort ;
+		atom:bufferType atom:Sequence ;
+		atom:supports patch:Message ;
+		lv2:index 1 ;
+		lv2:symbol "notify" ;
+		lv2:name "Notify" ;
+		lv2:designation lv2:control ;
+		rsz:minimumSize 8192 ;
+	] , [
+	  a lv2:InputPort,
+			lv2:AudioPort;
+		lv2:index 2 ;
+		lv2:symbol "audio_in_0" ;
+		lv2:name "Audio In 0" ;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
+		lv2:default 0.0;
+	] , [
+	  a lv2:InputPort,
+			lv2:AudioPort;
+		lv2:index 3 ;
+		lv2:symbol "audio_in_1" ;
+		lv2:name "Audio In 1" ;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
+		lv2:default 0.0;
+	] , [
+	  a lv2:InputPort,
+			lv2:AudioPort;
+		lv2:index 4 ;
+		lv2:symbol "audio_in_2" ;
+		lv2:name "Audio In 2" ;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
+		lv2:default 0.0;
+	] , [
+	  a lv2:InputPort,
+			lv2:AudioPort;
+		lv2:index 5 ;
+		lv2:symbol "audio_in_3" ;
+		lv2:name "Audio In 3" ;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
+		lv2:default 0.0;
+	] , [
+	  a lv2:InputPort,
+			lv2:AudioPort;
+		lv2:index 6 ;
+		lv2:symbol "audio_in_4" ;
+		lv2:name "Audio In 4" ;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
+		lv2:default 0.0;
+	] , [
+	  a lv2:InputPort,
+			lv2:AudioPort;
+		lv2:index 7 ;
+		lv2:symbol "audio_in_5" ;
+		lv2:name "Audio In 5" ;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
+		lv2:default 0.0;
+	] , [
+	  a lv2:InputPort,
+			lv2:AudioPort;
+		lv2:index 8 ;
+		lv2:symbol "audio_in_6" ;
+		lv2:name "Audio In 6" ;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
+		lv2:default 0.0;
+	] , [
+	  a lv2:InputPort,
+			lv2:AudioPort;
+		lv2:index 9 ;
+		lv2:symbol "audio_in_7" ;
+		lv2:name "Audio In 7" ;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
+		lv2:default 0.0;
+	] , [
+	  a lv2:OutputPort,
+			lv2:AudioPort;
+		lv2:index 10 ;
+		lv2:symbol "audio_out_0" ;
+		lv2:name "Audio Out 0" ;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
+	] , [
+	  a lv2:OutputPort,
+			lv2:AudioPort;
+		lv2:index 11 ;
+		lv2:symbol "audio_out_1" ;
+		lv2:name "Audio Out 1" ;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
+	] , [
+	  a lv2:OutputPort,
+			lv2:AudioPort;
+		lv2:index 12 ;
+		lv2:symbol "audio_out_2" ;
+		lv2:name "Audio Out 2" ;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
+	] , [
+	  a lv2:OutputPort,
+			lv2:AudioPort;
+		lv2:index 13 ;
+		lv2:symbol "audio_out_3" ;
+		lv2:name "Audio Out 3" ;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
+	] , [
+	  a lv2:OutputPort,
+			lv2:AudioPort;
+		lv2:index 14 ;
+		lv2:symbol "audio_out_4" ;
+		lv2:name "Audio Out 4" ;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
+	] , [
+	  a lv2:OutputPort,
+			lv2:AudioPort;
+		lv2:index 15 ;
+		lv2:symbol "audio_out_5" ;
+		lv2:name "Audio Out 5" ;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
+	] , [
+	  a lv2:OutputPort,
+			lv2:AudioPort;
+		lv2:index 16 ;
+		lv2:symbol "audio_out_6" ;
+		lv2:name "Audio Out 6" ;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
+	] , [
+	  a lv2:OutputPort,
+			lv2:AudioPort;
+		lv2:index 17 ;
+		lv2:symbol "audio_out_7" ;
+		lv2:name "Audio Out 7" ;
+		lv2:minimum -1.0;
+		lv2:maximum 1.0;
+	] ;
+
+	#patch:writable
+	#	vm:graph ;
+
+	state:state [
+		vm:graph [
+			a atom:Tuple ;
+			rdf:value (
+				7 vm:opInput
+				6 vm:opInput
+				5 vm:opInput
+				4 vm:opInput
+				3 vm:opInput
+				2 vm:opInput
+				1 vm:opInput
+				0 vm:opInput
+			)
+		]
+	] .
+
 vm:add
 	a pset:Preset ;
-		lv2:appliesTo vm:control ;
-		rdfs:label "Add" ;
+	lv2:appliesTo vm:control ,
+		vm:cv ,
+		vm:audio ;
+	rdfs:label "Add" ;
 	state:state [
 		vm:graph [
 			a atom:Tuple ;
@@ -398,8 +776,10 @@ vm:add
 
 vm:sub
 	a pset:Preset ;
-		lv2:appliesTo vm:control ;
-		rdfs:label "Subtract" ;
+	lv2:appliesTo vm:control ,
+		vm:cv ,
+		vm:audio ;
+	rdfs:label "Subtract" ;
 	state:state [
 		vm:graph [
 			a atom:Tuple ;
@@ -413,8 +793,10 @@ vm:sub
 
 vm:mul
 	a pset:Preset ;
-		lv2:appliesTo vm:control ;
-		rdfs:label "Multiply" ;
+	lv2:appliesTo vm:control ,
+		vm:cv ,
+		vm:audio ;
+	rdfs:label "Multiply" ;
 	state:state [
 		vm:graph [
 			a atom:Tuple ;
@@ -428,8 +810,10 @@ vm:mul
 
 vm:div
 	a pset:Preset ;
-		lv2:appliesTo vm:control ;
-		rdfs:label "Divide" ;
+	lv2:appliesTo vm:control ,
+		vm:cv ,
+		vm:audio ;
+	rdfs:label "Divide" ;
 	state:state [
 		vm:graph [
 			a atom:Tuple ;
@@ -443,8 +827,10 @@ vm:div
 
 vm:mod
 	a pset:Preset ;
-		lv2:appliesTo vm:control ;
-		rdfs:label "Modulo" ;
+	lv2:appliesTo vm:control ,
+		vm:cv ,
+		vm:audio ;
+	rdfs:label "Modulo" ;
 	state:state [
 		vm:graph [
 			a atom:Tuple ;
@@ -458,8 +844,10 @@ vm:mod
 
 vm:pow
 	a pset:Preset ;
-		lv2:appliesTo vm:control ;
-		rdfs:label "Power" ;
+	lv2:appliesTo vm:control ,
+		vm:cv ,
+		vm:audio ;
+	rdfs:label "Power" ;
 	state:state [
 		vm:graph [
 			a atom:Tuple ;
@@ -473,8 +861,10 @@ vm:pow
 
 vm:dBFS
 	a pset:Preset ;
-		lv2:appliesTo vm:control ;
-		rdfs:label "dBFS" ;
+	lv2:appliesTo vm:control ,
+		vm:cv ,
+		vm:audio ;
+	rdfs:label "dBFS" ;
 	lv2:port [
 		lv2:symbol "control_in_0" ;
 		pset:value 0.5
@@ -495,8 +885,10 @@ vm:dBFS
 
 vm:rand
 	a pset:Preset ;
-		lv2:appliesTo vm:control ;
-		rdfs:label "Random" ;
+	lv2:appliesTo vm:control ,
+		vm:cv ,
+		vm:audio ;
+	rdfs:label "Random" ;
 	state:state [
 		vm:graph [
 			a atom:Tuple ;
@@ -515,8 +907,10 @@ vm:rand
 
 vm:sampleAndHold
 	a pset:Preset ;
-		lv2:appliesTo vm:control ;
-		rdfs:label "Sample and hold" ;
+	lv2:appliesTo vm:control ,
+		vm:cv ,
+		vm:audio ;
+	rdfs:label "Sample and hold" ;
 	state:state [
 		vm:graph [
 			a atom:Tuple ;
@@ -534,8 +928,10 @@ vm:sampleAndHold
 
 vm:lfo
 	a pset:Preset ;
-		lv2:appliesTo vm:control ;
-		rdfs:label "LFO" ;
+	lv2:appliesTo vm:control ,
+		vm:cv ,
+		vm:audio ;
+	rdfs:label "LFO" ;
 	state:state [
 		vm:graph [
 			a atom:Tuple ;

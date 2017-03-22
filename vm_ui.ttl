@@ -23,7 +23,17 @@
 
 vm:vm_ui
 	ui:portNotification [
-		ui:plugin vm:vm ;
+		ui:plugin vm:control ;
+		lv2:symbol "notify" ;
+		ui:protocol atom:eventTransfer
+	] ;
+	ui:portNotification [
+		ui:plugin vm:cv ;
+		lv2:symbol "notify" ;
+		ui:protocol atom:eventTransfer
+	] ;
+	ui:portNotification [
+		ui:plugin vm:audio ;
 		lv2:symbol "notify" ;
 		ui:protocol atom:eventTransfer
 	] ;

@@ -262,53 +262,32 @@ connect_port(LV2_Handle instance, uint32_t port, void *data)
 #define CLIP(a, v, b) fmin(fmax(a, v), b)
 
 static void
-run(LV2_Handle instance, uint32_t nsamples)
+run_internal(plughandle_t *handle, uint32_t frames, bool notify,
+	const float *in [CTRL_MAX], float *out [CTRL_MAX])
 {
-	plughandle_t *handle = instance;
-
-	const uint32_t capacity = handle->notify->atom.size;
-	LV2_Atom_Forge_Frame frame;
-	lv2_atom_forge_set_buffer(&handle->forge, (uint8_t *)handle->notify, capacity);
-	handle->ref = lv2_atom_forge_sequence_head(&handle->forge, &frame, 0);
-
-	int64_t last_t = 0;
-	LV2_ATOM_SEQUENCE_FOREACH(handle->control, ev)
-	{
-		const LV2_Atom *atom= &ev->body;
-		const LV2_Atom_Object *obj = (const LV2_Atom_Object *)&ev->body;
-
-		if(!timely_advance(&handle->timely, obj, last_t, ev->time.frames))
-			props_advance(&handle->props, &handle->forge, ev->time.frames, obj, &handle->ref);
-
-		last_t = ev->time.frames;
-	}
-	timely_advance(&handle->timely, NULL, last_t, nsamples);
-
-	if(handle->needs_sync)
-	{
-		props_set(&handle->props, &handle->forge, nsamples - 1, handle->vm_graph, &handle->ref);
-		handle->needs_sync = false;
-	}
-
 	for(unsigned i = 0; i < CTRL_MAX; i++)
 	{
-		const float in1 = CLIP(VM_MIN, *handle->in[i], VM_MAX);
+		const float in1 = CLIP(VM_MIN, *in[i], VM_MAX);
+
 		if(handle->in0[i] != in1)
 		{
 			handle->needs_recalc = true;
 			handle->in0[i] = in1;
 
-			LV2_Atom_Forge_Frame tup_frame;
-			if(handle->ref)
-				handle->ref = lv2_atom_forge_frame_time(&handle->forge, nsamples - 1);
-			if(handle->ref)
-				handle->ref = lv2_atom_forge_tuple(&handle->forge, &tup_frame);
-			if(handle->ref)
-				handle->ref = lv2_atom_forge_int(&handle->forge, i + 2);
-			if(handle->ref)
-				handle->ref = lv2_atom_forge_float(&handle->forge, in1);
-			if(handle->ref)
-				lv2_atom_forge_pop(&handle->forge, &tup_frame);
+			if(notify)
+			{
+				LV2_Atom_Forge_Frame tup_frame;
+				if(handle->ref)
+					handle->ref = lv2_atom_forge_frame_time(&handle->forge, frames);
+				if(handle->ref)
+					handle->ref = lv2_atom_forge_tuple(&handle->forge, &tup_frame);
+				if(handle->ref)
+					handle->ref = lv2_atom_forge_int(&handle->forge, i + 2);
+				if(handle->ref)
+					handle->ref = lv2_atom_forge_float(&handle->forge, in1);
+				if(handle->ref)
+					lv2_atom_forge_pop(&handle->forge, &tup_frame);
+			}
 		}
 	}
 
@@ -832,11 +811,6 @@ run(LV2_Handle instance, uint32_t nsamples)
 		}
 
 		_stack_pop_num(&handle->stack, handle->out0, CTRL_MAX);
-#if 0
-		for(unsigned i = 0; i < CTRL_MAX; i++)
-			printf("out %u: %f\n", i, handle->out0[i]);
-#endif
-
 		handle->needs_recalc = false;
 	}
 
@@ -844,22 +818,152 @@ run(LV2_Handle instance, uint32_t nsamples)
 	{
 		const float out1 = CLIP(VM_MIN, handle->out0[i], VM_MAX);
 
-		if(*handle->out[i] != out1)
+		if(*out[i] != out1)
 		{
-			*handle->out[i] = out1;
+			*out[i] = out1;
 
-			LV2_Atom_Forge_Frame tup_frame;
-			if(handle->ref)
-				handle->ref = lv2_atom_forge_frame_time(&handle->forge, nsamples - 1);
-			if(handle->ref)
-				handle->ref = lv2_atom_forge_tuple(&handle->forge, &tup_frame);
-			if(handle->ref)
-				handle->ref = lv2_atom_forge_int(&handle->forge, i + 10);
-			if(handle->ref)
-				handle->ref = lv2_atom_forge_float(&handle->forge, out1);
-			if(handle->ref)
-				lv2_atom_forge_pop(&handle->forge, &tup_frame);
+			if(notify)
+			{
+				LV2_Atom_Forge_Frame tup_frame;
+				if(handle->ref)
+					handle->ref = lv2_atom_forge_frame_time(&handle->forge, frames);
+				if(handle->ref)
+					handle->ref = lv2_atom_forge_tuple(&handle->forge, &tup_frame);
+				if(handle->ref)
+					handle->ref = lv2_atom_forge_int(&handle->forge, i + 10);
+				if(handle->ref)
+					handle->ref = lv2_atom_forge_float(&handle->forge, out1);
+				if(handle->ref)
+					lv2_atom_forge_pop(&handle->forge, &tup_frame);
+			}
 		}
+	}
+}
+
+static void
+run_control(LV2_Handle instance, uint32_t nsamples)
+{
+	plughandle_t *handle = instance;
+
+	const uint32_t capacity = handle->notify->atom.size;
+	LV2_Atom_Forge_Frame frame;
+	lv2_atom_forge_set_buffer(&handle->forge, (uint8_t *)handle->notify, capacity);
+	handle->ref = lv2_atom_forge_sequence_head(&handle->forge, &frame, 0);
+
+	int64_t last_t = 0;
+	LV2_ATOM_SEQUENCE_FOREACH(handle->control, ev)
+	{
+		const LV2_Atom *atom= &ev->body;
+		const LV2_Atom_Object *obj = (const LV2_Atom_Object *)&ev->body;
+
+		if(!timely_advance(&handle->timely, obj, last_t, ev->time.frames))
+			props_advance(&handle->props, &handle->forge, ev->time.frames, obj, &handle->ref);
+
+		last_t = ev->time.frames;
+	}
+	timely_advance(&handle->timely, NULL, last_t, nsamples);
+
+	if(handle->needs_sync)
+	{
+		props_set(&handle->props, &handle->forge, nsamples - 1, handle->vm_graph, &handle->ref);
+		handle->needs_sync = false;
+	}
+
+	{
+		const float *in [CTRL_MAX ] = {
+			handle->in[0],
+			handle->in[1],
+			handle->in[2],
+			handle->in[3],
+			handle->in[4],
+			handle->in[5],
+			handle->in[6],
+			handle->in[7]
+		};
+
+		float *out [CTRL_MAX ] = {
+			handle->out[0],
+			handle->out[1],
+			handle->out[2],
+			handle->out[3],
+			handle->out[4],
+			handle->out[5],
+			handle->out[6],
+			handle->out[7]
+		};
+
+		const bool notify = true;
+		run_internal(handle, nsamples -1, notify, in, out);
+	}
+
+	if(handle->ref)
+		handle->ref = lv2_atom_forge_frame_time(&handle->forge, nsamples - 1);
+	if(handle->ref)
+		handle->ref = lv2_atom_forge_long(&handle->forge, handle->off);
+
+	if(handle->ref)
+		lv2_atom_forge_pop(&handle->forge, &frame);
+	else
+		lv2_atom_sequence_clear(handle->notify);
+
+	handle->off += nsamples;
+}
+
+static void
+run_cv(LV2_Handle instance, uint32_t nsamples)
+{
+	plughandle_t *handle = instance;
+
+	const uint32_t capacity = handle->notify->atom.size;
+	LV2_Atom_Forge_Frame frame;
+	lv2_atom_forge_set_buffer(&handle->forge, (uint8_t *)handle->notify, capacity);
+	handle->ref = lv2_atom_forge_sequence_head(&handle->forge, &frame, 0);
+
+	int64_t last_t = 0;
+	LV2_ATOM_SEQUENCE_FOREACH(handle->control, ev)
+	{
+		const LV2_Atom *atom= &ev->body;
+		const LV2_Atom_Object *obj = (const LV2_Atom_Object *)&ev->body;
+
+		if(!timely_advance(&handle->timely, obj, last_t, ev->time.frames))
+			props_advance(&handle->props, &handle->forge, ev->time.frames, obj, &handle->ref);
+
+		last_t = ev->time.frames;
+	}
+	timely_advance(&handle->timely, NULL, last_t, nsamples);
+
+	if(handle->needs_sync)
+	{
+		props_set(&handle->props, &handle->forge, nsamples - 1, handle->vm_graph, &handle->ref);
+		handle->needs_sync = false;
+	}
+
+	for(unsigned i = 0; i < nsamples; i++)
+	{
+		const float *in [CTRL_MAX ] = {
+			&handle->in[0][i],
+			&handle->in[1][i],
+			&handle->in[2][i],
+			&handle->in[3][i],
+			&handle->in[4][i],
+			&handle->in[5][i],
+			&handle->in[6][i],
+			&handle->in[7][i]
+		};
+
+		float *out [CTRL_MAX ] = {
+			&handle->out[0][i],
+			&handle->out[1][i],
+			&handle->out[2][i],
+			&handle->out[3][i],
+			&handle->out[4][i],
+			&handle->out[5][i],
+			&handle->out[6][i],
+			&handle->out[7][i]
+		};
+
+		const bool notify = (i == 0);
+		run_internal(handle, nsamples - 1, notify, in, out);
 	}
 
 	if(handle->ref)
@@ -945,7 +1049,29 @@ static const LV2_Descriptor vm_control = {
 	.instantiate    = instantiate,
 	.connect_port   = connect_port,
 	.activate       = NULL,
-	.run            = run,
+	.run            = run_control,
+	.deactivate     = NULL,
+	.cleanup        = cleanup,
+	.extension_data = extension_data
+};
+
+static const LV2_Descriptor vm_cv = {
+	.URI            = VM_PREFIX"cv",
+	.instantiate    = instantiate,
+	.connect_port   = connect_port,
+	.activate       = NULL,
+	.run            = run_cv,
+	.deactivate     = NULL,
+	.cleanup        = cleanup,
+	.extension_data = extension_data
+};
+
+static const LV2_Descriptor vm_audio = {
+	.URI            = VM_PREFIX"audio",
+	.instantiate    = instantiate,
+	.connect_port   = connect_port,
+	.activate       = NULL,
+	.run            = run_cv,
 	.deactivate     = NULL,
 	.cleanup        = cleanup,
 	.extension_data = extension_data
@@ -958,6 +1084,11 @@ lv2_descriptor(uint32_t index)
 	{
 		case 0:
 			return &vm_control;
+		case 1:
+			return &vm_cv;
+		case 2:
+			return &vm_audio;
+
 		default:
 			return NULL;
 	}
