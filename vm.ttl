@@ -57,79 +57,132 @@ vm:graph
 	rdfs:comment "vm graph tuple" .
 
 vm:opInput
-	a rdfs:Datatype ; rdfs:label "Input port value" .
+	a rdfs:Datatype .
 vm:opPush
-	a rdfs:Datatype ; rdfs:label "Push Top of stack" .
-vm:opAdd
-	a rdfs:Datatype ; rdfs:label "Addition" .
-vm:opSub
-	a rdfs:Datatype ; rdfs:label "Subtraction" .
-vm:opMul
-	a rdfs:Datatype ; rdfs:label "Multiplication" .
-vm:opDiv
-	a rdfs:Datatype ; rdfs:label "Division" .
-vm:opNeg
-	a rdfs:Datatype ; rdfs:label "Negate" .
-vm:opAbs
-	a rdfs:Datatype ; rdfs:label "Absolute value" .
-vm:opPow
-	a rdfs:Datatype ; rdfs:label "Power" .
-vm:opSqrt
-	a rdfs:Datatype ; rdfs:label "Square root" .
-vm:opMod
-	a rdfs:Datatype ; rdfs:label "Modulo" .
-vm:opExp
-	a rdfs:Datatype ; rdfs:label "Exponentiation" .
-vm:opExp2
-	a rdfs:Datatype ; rdfs:label "Exponentiation base 2" .
-vm:opLog
-	a rdfs:Datatype ; rdfs:label "Logarithm" .
-vm:opLog2
-	a rdfs:Datatype ; rdfs:label "Logarithm base 2" .
-vm:opLog10
-	a rdfs:Datatype ; rdfs:label "Logarithm base 10" .
-vm:opSin
-	a rdfs:Datatype ; rdfs:label "Sinus" .
-vm:opCos
-	a rdfs:Datatype ; rdfs:label "Cosinus" .
+	a rdfs:Datatype .
 vm:opSwap
-	a rdfs:Datatype ; rdfs:label "Swap" .
-vm:opPi
-	a rdfs:Datatype ; rdfs:label "Pi" .
-vm:opEq
-	a rdfs:Datatype ; rdfs:label "Equal" .
-vm:opLt
-	a rdfs:Datatype ; rdfs:label "Less than" .
-vm:opGt
-	a rdfs:Datatype ; rdfs:label "Greater than" .
-vm:opLe
-	a rdfs:Datatype ; rdfs:label "Less or equal" .
-vm:opGe
-	a rdfs:Datatype ; rdfs:label "Greater or equal" .
-vm:opAnd
-	a rdfs:Datatype ; rdfs:label "And" .
-vm:opOr
-	a rdfs:Datatype ; rdfs:label "Or" .
-vm:opNot
-	a rdfs:Datatype ; rdfs:label "Not" .
-vm:opBAnd
-	a rdfs:Datatype ; rdfs:label "Bitwise And" .
-vm:opBOr
-	a rdfs:Datatype ; rdfs:label "Bitwise Or" .
-vm:opBNot
-	a rdfs:Datatype ; rdfs:label "Bitwise Not" .
-vm:opLShift
-	a rdfs:Datatype ; rdfs:label "Left shift" .
-vm:opRShift
-	a rdfs:Datatype ; rdfs:label "Right shift" .
-vm:opTernary
-	a rdfs:Datatype ; rdfs:label "Ternary" .
+	a rdfs:Datatype .
 vm:opStore
-	a rdfs:Datatype ; rdfs:label "Store in register" .
+	a rdfs:Datatype .
 vm:opLoad
-	a rdfs:Datatype ; rdfs:label "Load from register" .
+	a rdfs:Datatype .
+
 vm:opRand
-	a rdfs:Datatype ; rdfs:label "Random" .
+	a rdfs:Datatype .
+
+vm:opAdd
+	a rdfs:Datatype .
+vm:opSub
+	a rdfs:Datatype .
+vm:opMul
+	a rdfs:Datatype .
+vm:opDiv
+	a rdfs:Datatype .
+vm:opMod
+	a rdfs:Datatype .
+vm:opPow
+	a rdfs:Datatype .
+
+vm:opNeg
+	a rdfs:Datatype .
+vm:opAbs
+	a rdfs:Datatype .
+vm:opSqrt
+	a rdfs:Datatype .
+vm:opCbrt
+	a rdfs:Datatype .
+
+vm:opFloor
+	a rdfs:Datatype .
+vm:opCeil
+	a rdfs:Datatype .
+vm:opRound
+	a rdfs:Datatype .
+vm:opRint
+	a rdfs:Datatype .
+vm:opTrunc
+	a rdfs:Datatype .
+vm:opModF
+	a rdfs:Datatype .
+
+vm:opExp
+	a rdfs:Datatype .
+vm:opExp2
+	a rdfs:Datatype .
+vm:opLDExp
+	a rdfs:Datatype .
+vm:opFRExp
+	a rdfs:Datatype .
+vm:opLog
+	a rdfs:Datatype .
+vm:opLog2
+	a rdfs:Datatype .
+vm:opLog10
+	a rdfs:Datatype .
+
+vm:opPi
+	a rdfs:Datatype .
+vm:opSin
+	a rdfs:Datatype .
+vm:opCos
+	a rdfs:Datatype .
+vm:opTan
+	a rdfs:Datatype .
+vm:opASin
+	a rdfs:Datatype .
+vm:opACos
+	a rdfs:Datatype .
+vm:opATan
+	a rdfs:Datatype .
+vm:opATan2
+	a rdfs:Datatype .
+vm:opSinH
+	a rdfs:Datatype .
+vm:opCosH
+	a rdfs:Datatype .
+vm:opTanH
+	a rdfs:Datatype .
+vm:opASinH
+	a rdfs:Datatype .
+vm:opACosH
+	a rdfs:Datatype .
+vm:opATanH
+	a rdfs:Datatype .
+
+vm:opEq
+	a rdfs:Datatype .
+vm:opLt
+	a rdfs:Datatype .
+vm:opGt
+	a rdfs:Datatype .
+vm:opLe
+	a rdfs:Datatype .
+vm:opGe
+	a rdfs:Datatype .
+vm:opTernary
+	a rdfs:Datatype .
+vm:opMin
+	a rdfs:Datatype .
+vm:opMax
+	a rdfs:Datatype .
+
+vm:opAnd
+	a rdfs:Datatype .
+vm:opOr
+	a rdfs:Datatype .
+vm:opNot
+	a rdfs:Datatype .
+
+vm:opBAnd
+	a rdfs:Datatype .
+vm:opBOr
+	a rdfs:Datatype .
+vm:opBNot
+	a rdfs:Datatype .
+vm:opLShift
+	a rdfs:Datatype .
+vm:opRShift
+	a rdfs:Datatype .
 
 # Plugin
 vm:vm

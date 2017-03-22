@@ -259,9 +259,7 @@ connect_port(LV2_Handle instance, uint32_t port, void *data)
 	}
 }
 
-#define MIN(a, b)     (a < b ? a : b)
-#define MAX(a, b)     (a > b ? a : b)
-#define CLIP(a, v, b) MIN(MAX(a, v), b)
+#define CLIP(a, v, b) fmin(fmax(a, v), b)
 
 static void
 run(LV2_Handle instance, uint32_t nsamples)
@@ -447,6 +445,51 @@ run(LV2_Handle instance, uint32_t nsamples)
 							const num_t c = sqrt(a);
 							_stack_push(&handle->stack, c);
 						} break;
+						case OP_CBRT:
+						{
+							const num_t a = _stack_pop(&handle->stack);
+							const num_t c = cbrt(a);
+							_stack_push(&handle->stack, c);
+						} break;
+
+						case OP_FLOOR:
+						{
+							const num_t a = _stack_pop(&handle->stack);
+							const num_t c = floor(a);
+							_stack_push(&handle->stack, c);
+						} break;
+						case OP_CEIL:
+						{
+							const num_t a = _stack_pop(&handle->stack);
+							const num_t c = ceil(a);
+							_stack_push(&handle->stack, c);
+						} break;
+						case OP_ROUND:
+						{
+							const num_t a = _stack_pop(&handle->stack);
+							const num_t c = round(a);
+							_stack_push(&handle->stack, c);
+						} break;
+						case OP_RINT:
+						{
+							const num_t a = _stack_pop(&handle->stack);
+							const num_t c = rint(a);
+							_stack_push(&handle->stack, c);
+						} break;
+						case OP_TRUNC:
+						{
+							const num_t a = _stack_pop(&handle->stack);
+							const num_t c = trunc(a);
+							_stack_push(&handle->stack, c);
+						} break;
+						case OP_MODF:
+						{
+							const num_t a = _stack_pop(&handle->stack);
+							num_t d;
+							const num_t c = modf(a, &d);
+							_stack_push(&handle->stack, c);
+							_stack_push(&handle->stack, d);
+						} break;
 
 						case OP_EXP:
 						{
@@ -459,6 +502,21 @@ run(LV2_Handle instance, uint32_t nsamples)
 							const num_t a = _stack_pop(&handle->stack);
 							const num_t c = exp2(a);
 							_stack_push(&handle->stack, c);
+						} break;
+						case OP_LD_EXP:
+						{
+							num_t ab [2];
+							_stack_pop_num(&handle->stack, ab, 2);
+							const num_t c = ldexp(ab[1], ab[0]);
+							_stack_push(&handle->stack, c);
+						} break;
+						case OP_FR_EXP:
+						{
+							const num_t a = _stack_pop(&handle->stack);
+							int d;
+							const num_t c = frexp(a, &d);
+							_stack_push(&handle->stack, c);
+							_stack_push(&handle->stack, d);
 						} break;
 						case OP_LOG:
 						{
@@ -479,6 +537,11 @@ run(LV2_Handle instance, uint32_t nsamples)
 							_stack_push(&handle->stack, c);
 						} break;
 
+						case OP_PI:
+						{
+							num_t c = M_PI;
+							_stack_push(&handle->stack, c);
+						} break;
 						case OP_SIN:
 						{
 							const num_t a = _stack_pop(&handle->stack);
@@ -491,9 +554,71 @@ run(LV2_Handle instance, uint32_t nsamples)
 							const num_t c = cos(a);
 							_stack_push(&handle->stack, c);
 						} break;
-						case OP_PI:
+						case OP_TAN:
 						{
-							num_t c = M_PI;
+							const num_t a = _stack_pop(&handle->stack);
+							const num_t c = tan(a);
+							_stack_push(&handle->stack, c);
+						} break;
+						case OP_ASIN:
+						{
+							const num_t a = _stack_pop(&handle->stack);
+							const num_t c = asin(a);
+							_stack_push(&handle->stack, c);
+						} break;
+						case OP_ACOS:
+						{
+							const num_t a = _stack_pop(&handle->stack);
+							const num_t c = acos(a);
+							_stack_push(&handle->stack, c);
+						} break;
+						case OP_ATAN:
+						{
+							const num_t a = _stack_pop(&handle->stack);
+							const num_t c = atan(a);
+							_stack_push(&handle->stack, c);
+						} break;
+						case OP_ATAN2:
+						{
+							num_t ab [2];
+							_stack_pop_num(&handle->stack, ab, 2);
+							const num_t c = atan2(ab[1], ab[0]);
+							_stack_push(&handle->stack, c);
+						} break;
+						case OP_SINH:
+						{
+							const num_t a = _stack_pop(&handle->stack);
+							const num_t c = sinh(a);
+							_stack_push(&handle->stack, c);
+						} break;
+						case OP_COSH:
+						{
+							const num_t a = _stack_pop(&handle->stack);
+							const num_t c = cosh(a);
+							_stack_push(&handle->stack, c);
+						} break;
+						case OP_TANH:
+						{
+							const num_t a = _stack_pop(&handle->stack);
+							const num_t c = tanh(a);
+							_stack_push(&handle->stack, c);
+						} break;
+						case OP_ASINH:
+						{
+							const num_t a = _stack_pop(&handle->stack);
+							const num_t c = asinh(a);
+							_stack_push(&handle->stack, c);
+						} break;
+						case OP_ACOSH:
+						{
+							const num_t a = _stack_pop(&handle->stack);
+							const num_t c = acosh(a);
+							_stack_push(&handle->stack, c);
+						} break;
+						case OP_ATANH:
+						{
+							const num_t a = _stack_pop(&handle->stack);
+							const num_t c = atanh(a);
 							_stack_push(&handle->stack, c);
 						} break;
 
@@ -539,6 +664,20 @@ run(LV2_Handle instance, uint32_t nsamples)
 							const bool c = ab[0];
 							_stack_push(&handle->stack, c ? ab[2] : ab[1]);
 						} break;
+						case OP_MINI:
+						{
+							num_t ab [2];
+							_stack_pop_num(&handle->stack, ab, 2);
+							const num_t c = fmin(ab[1], ab[0]);
+							_stack_push(&handle->stack, c);
+						} break;
+						case OP_MAXI:
+						{
+							num_t ab [2];
+							_stack_pop_num(&handle->stack, ab, 2);
+							const num_t c = fmax(ab[1], ab[0]);
+							_stack_push(&handle->stack, c);
+						} break;
 
 						case OP_AND:
 						{
@@ -554,6 +693,7 @@ run(LV2_Handle instance, uint32_t nsamples)
 							const bool c = ab[1] || ab[0];
 							_stack_push(&handle->stack, c);
 						} break;
+
 						case OP_NOT:
 						{
 							const int a = _stack_pop(&handle->stack);

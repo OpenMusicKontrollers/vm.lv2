@@ -93,16 +93,37 @@ enum _vm_opcode_enum_t {
 	OP_NEG,
 	OP_ABS,
 	OP_SQRT,
+	OP_CBRT,
+
+	OP_FLOOR,
+	OP_CEIL,
+	OP_ROUND,
+	OP_RINT,
+	OP_TRUNC,
+	OP_MODF,
 
 	OP_EXP,
 	OP_EXP_2,
+	OP_LD_EXP,
+	OP_FR_EXP,
 	OP_LOG,
 	OP_LOG_2,
 	OP_LOG_10,
 
+	OP_PI,
 	OP_SIN,
 	OP_COS,
-	OP_PI,
+	OP_TAN,
+	OP_ASIN,
+	OP_ACOS,
+	OP_ATAN,
+	OP_ATAN2,
+	OP_SINH,
+	OP_COSH,
+	OP_TANH,
+	OP_ASINH,
+	OP_ACOSH,
+	OP_ATANH,
 
 	OP_EQ,
 	OP_LT,
@@ -110,6 +131,8 @@ enum _vm_opcode_enum_t {
 	OP_LE,
 	OP_GE,
 	OP_TER,
+	OP_MINI,
+	OP_MAXI,
 
 	OP_AND,
 	OP_OR,
@@ -197,14 +220,14 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 	},
 	[OP_PUSH] = {
 		.uri    = VM_PREFIX"opPush",
-		.label  = "Push top",
+		.label  = "Push topmost value",
 		.mnemo  = "push",
 		.npops  = 1,
 		.npushs = 2
 	},
 	[OP_SWAP]  = {
 		.uri    = VM_PREFIX"opSwap",
-		.label  = "Swap",
+		.label  = "Swap 2 topmost values",
 		.mnemo  = "swap",
 		.npops  = 2,
 		.npushs = 2
@@ -226,7 +249,7 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 
 	[OP_RAND]  = {
 		.uri    = VM_PREFIX"opRand",
-		.label  = "Random number",
+		.label  = "Generate random number",
 		.mnemo  = "rand",
 		.npops  = 0,
 		.npushs = 1
@@ -296,6 +319,56 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.npops  = 1,
 		.npushs = 1
 	},
+	[OP_CBRT]  = {
+		.uri    = VM_PREFIX"opCbrt",
+		.label  = "Cubic root",
+		.mnemo  = "cbrt",
+		.npops  = 1,
+		.npushs = 1
+	},
+
+	[OP_FLOOR]  = {
+		.uri    = VM_PREFIX"opFloor",
+		.label  = "Floor",
+		.mnemo  = "floor",
+		.npops  = 1,
+		.npushs = 1
+	},
+	[OP_CEIL]  = {
+		.uri    = VM_PREFIX"opCeil",
+		.label  = "Ceiling",
+		.mnemo  = "ceil",
+		.npops  = 1,
+		.npushs = 1
+	},
+	[OP_ROUND]  = {
+		.uri    = VM_PREFIX"opRound",
+		.label  = "Round",
+		.mnemo  = "round",
+		.npops  = 1,
+		.npushs = 1
+	},
+	[OP_RINT]  = {
+		.uri    = VM_PREFIX"opRint",
+		.label  = "Rint",
+		.mnemo  = "rint",
+		.npops  = 1,
+		.npushs = 1
+	},
+	[OP_TRUNC]  = {
+		.uri    = VM_PREFIX"opTrunc",
+		.label  = "Truncate",
+		.mnemo  = "trunc",
+		.npops  = 1,
+		.npushs = 1
+	},
+	[OP_MODF]  = {
+		.uri    = VM_PREFIX"opModF",
+		.label  = "Break number into integer and fractional parts",
+		.mnemo  = "modf",
+		.npops  = 1,
+		.npushs = 2
+	},
 
 	[OP_EXP]  = {
 		.uri    = VM_PREFIX"opExp",
@@ -310,6 +383,20 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.mnemo  = "exp2",
 		.npops  = 1,
 		.npushs = 1
+	},
+	[OP_LD_EXP]  = {
+		.uri    = VM_PREFIX"opLDExp",
+		.label  = "Multiply number by 2 raised to a power",
+		.mnemo  = "ldexp",
+		.npops  = 2,
+		.npushs = 1
+	},
+	[OP_FR_EXP]  = {
+		.uri    = VM_PREFIX"opFRExp",
+		.label  = "Break number into significand and power of 2",
+		.mnemo  = "frexp",
+		.npops  = 1,
+		.npushs = 2
 	},
 	[OP_LOG]  = {
 		.uri    = VM_PREFIX"opLog",
@@ -333,6 +420,13 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.npushs = 1
 	},
 
+	[OP_PI]  = {
+		.uri    = VM_PREFIX"opPi",
+		.label  = "Pi",
+		.mnemo  = "pi",
+		.npops  = 0,
+		.npushs = 1
+	},
 	[OP_SIN]  = {
 		.uri    = VM_PREFIX"opSin",
 		.label  = "Sinus",
@@ -347,11 +441,81 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.npops  = 1,
 		.npushs = 1
 	},
-	[OP_PI]  = {
-		.uri    = VM_PREFIX"opPi",
-		.label  = "Pi",
-		.mnemo  = "pi",
-		.npops  = 0,
+	[OP_TAN]  = {
+		.uri    = VM_PREFIX"opTan",
+		.label  = "Tangens",
+		.mnemo  = "tan",
+		.npops  = 1,
+		.npushs = 1
+	},
+	[OP_ASIN]  = {
+		.uri    = VM_PREFIX"opASin",
+		.label  = "Arcus Sinus",
+		.mnemo  = "asin",
+		.npops  = 1,
+		.npushs = 1
+	},
+	[OP_ACOS]  = {
+		.uri    = VM_PREFIX"opACos",
+		.label  = "Arcus Cosinus",
+		.mnemo  = "acos",
+		.npops  = 1,
+		.npushs = 1
+	},
+	[OP_ATAN]  = {
+		.uri    = VM_PREFIX"opATan",
+		.label  = "Arcus Tangens",
+		.mnemo  = "atan",
+		.npops  = 1,
+		.npushs = 1
+	},
+	[OP_ATAN2]  = {
+		.uri    = VM_PREFIX"opATan2",
+		.label  = "Arcus Tangens using quadrants",
+		.mnemo  = "atan2",
+		.npops  = 2,
+		.npushs = 1
+	},
+	[OP_SINH]  = {
+		.uri    = VM_PREFIX"opSinH",
+		.label  = "Sinus Hyperbolicus",
+		.mnemo  = "sinh",
+		.npops  = 1,
+		.npushs = 1
+	},
+	[OP_COSH]  = {
+		.uri    = VM_PREFIX"opCosH",
+		.label  = "Cosinus Hyperbolicus",
+		.mnemo  = "cosh",
+		.npops  = 1,
+		.npushs = 1
+	},
+	[OP_TANH]  = {
+		.uri    = VM_PREFIX"opTanH",
+		.label  = "Tangens Hyperbolicus",
+		.mnemo  = "tanh",
+		.npops  = 1,
+		.npushs = 1
+	},
+	[OP_ASINH]  = {
+		.uri    = VM_PREFIX"opASinH",
+		.label  = "Arcus Sinus Hyperbolicus",
+		.mnemo  = "asinh",
+		.npops  = 1,
+		.npushs = 1
+	},
+	[OP_ACOSH]  = {
+		.uri    = VM_PREFIX"opACosH",
+		.label  = "Arcus Cosinus Hyperbolicus",
+		.mnemo  = "acosh",
+		.npops  = 1,
+		.npushs = 1
+	},
+	[OP_ATANH]  = {
+		.uri    = VM_PREFIX"opATanH",
+		.label  = "Arcus Tangens Hyperbolicus",
+		.mnemo  = "atanh",
+		.npops  = 1,
 		.npushs = 1
 	},
 
@@ -395,6 +559,20 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.label  = "Ternary operator",
 		.mnemo  = "?",
 		.npops  = 3,
+		.npushs = 1
+	},
+	[OP_MINI]  = {
+		.uri    = VM_PREFIX"opMin",
+		.label  = "Minimum",
+		.mnemo  = "min",
+		.npops  = 2,
+		.npushs = 1
+	},
+	[OP_MAXI]  = {
+		.uri    = VM_PREFIX"opMax",
+		.label  = "Maximum",
+		.mnemo  = "max",
+		.npops  = 2,
 		.npushs = 1
 	},
 
