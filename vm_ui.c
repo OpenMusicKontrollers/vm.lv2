@@ -49,6 +49,8 @@ struct _atom_ser_t {
 
 struct _plot_t {
 	float vals [PLOT_MAX];
+	int window;
+	double pre;
 };
 
 struct _plughandle_t {
@@ -280,7 +282,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 				nk_layout_row_dynamic(ctx, dy*4, 1);
 				_draw_plot(ctx, handle->inp[i].vals, PLOT_MAX);
 
-				nk_layout_row_dynamic(ctx, dy, 1);
+				nk_layout_row_dynamic(ctx, dy, 2);
 				if(i == 0) // calculate only once
 				{
 					stp = scl * VM_STP;
@@ -290,6 +292,11 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 				nk_property_float(ctx, input_labels[i], VM_MIN, &handle->in0[i], VM_MAX, stp, fpp);
 				if(old_val != handle->in0[i])
 					handle->writer(handle->controller, i + 2, sizeof(float), 0, &handle->in0[i]);
+
+				const int old_window = handle->inp[i].window;
+				nk_property_int(ctx, "#", 10, &handle->inp[i].window, 100000, 1, 1.f);
+				if(old_window != handle->inp[i].window)
+					memset(handle->inp[i].vals, 0x0, sizeof(float)*PLOT_MAX);
 			}
 
 			nk_group_end(ctx);
@@ -471,8 +478,13 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 				nk_layout_row_dynamic(ctx, dy*4, 1);
 				_draw_plot(ctx, handle->outp[i].vals, PLOT_MAX);
 
-				nk_layout_row_dynamic(ctx, dy, 1);
+				nk_layout_row_dynamic(ctx, dy, 2);
 				nk_labelf(ctx, NK_TEXT_LEFT, "Output %u: %+f", i, handle->out0[i]);
+
+				const int old_window = handle->outp[i].window;
+				nk_property_int(ctx, "#", 10, &handle->outp[i].window, 100000, 1, 1.f);
+				if(old_window != handle->outp[i].window)
+					memset(handle->outp[i].vals, 0x0, sizeof(float)*PLOT_MAX);
 			}
 
 			nk_group_end(ctx);
@@ -592,6 +604,12 @@ instantiate(const LV2UI_Descriptor *descriptor, const char *plugin_uri,
 
 	_restore_state(handle);
 
+	for(unsigned i = 0; i < CTRL_MAX; i++)
+	{
+		handle->inp[i].window = 1000; // 1 second window
+		handle->outp[i].window = 1000; // 1 second window
+	}
+
 	return handle;
 }
 
@@ -632,40 +650,63 @@ port_event(LV2UI_Handle instance, uint32_t index, uint32_t size,
 
 					const int64_t dt = off->body - handle->off;
 					handle->off = off->body;
-
-					const unsigned ntimes = 4; //FIXME
-					const unsigned window = ceilf(PLOT_MAX / handle->sample_rate / ntimes);
-					const unsigned remainder = PLOT_MAX - window;
+					const float dts = 1000.f * dt / handle->sample_rate; // in seconds
 
 					float mem [PLOT_MAX];
 					bool needs_refresh = false;
+
+					//FIXME can get out of sync
 
 					for(unsigned i = 0; i < CTRL_MAX; i++)
 					{
 						// inputs
 						{
-							memcpy(mem, &handle->inp[i].vals[window], sizeof(float)*remainder);
-							for(unsigned j = remainder; j < PLOT_MAX; j++)
-								mem[j] = handle->in0[i];
+							handle->inp[i].pre += PLOT_MAX * dts / handle->inp[i].window;
+							double intp;
+							const double frac = modf(handle->inp[i].pre, &intp);
 
-							//FIXME can be made more efficient
-							if(memcmp(handle->inp[i].vals, mem, sizeof(float)*PLOT_MAX))
-								needs_refresh = true;
+							if(intp > 0)
+							{
+								handle->inp[i].pre = frac;
 
-							memcpy(handle->inp[i].vals, mem, sizeof(float)*PLOT_MAX);
+								const unsigned pre = floorf(intp);
+								const unsigned post = PLOT_MAX - pre;
+
+								memcpy(mem, &handle->inp[i].vals[pre], sizeof(float)*post);
+								for(unsigned j = post; j < PLOT_MAX; j++)
+									mem[j] = handle->in0[i];
+
+								//FIXME can be made more efficient
+								if(memcmp(handle->inp[i].vals, mem, sizeof(float)*PLOT_MAX))
+									needs_refresh = true;
+
+								memcpy(handle->inp[i].vals, mem, sizeof(float)*PLOT_MAX);
+							}
 						}
 
 						// outputs
 						{
-							memcpy(mem, &handle->outp[i].vals[window], sizeof(float)*remainder);
-							for(unsigned j = remainder; j < PLOT_MAX; j++)
-								mem[j] = handle->out0[i];
+							handle->outp[i].pre += PLOT_MAX * dts / handle->outp[i].window;
+							double intp;
+							const double frac = modf(handle->outp[i].pre, &intp);
 
-							//FIXME can be made more efficient
-							if(memcmp(handle->outp[i].vals, mem, sizeof(float)*PLOT_MAX))
-								needs_refresh = true;
+							if(intp > 0)
+							{
+								handle->outp[i].pre = frac;
 
-							memcpy(handle->outp[i].vals, mem, sizeof(float)*PLOT_MAX);
+								const unsigned pre = floorf(intp);
+								const unsigned post = PLOT_MAX - pre;
+
+								memcpy(mem, &handle->outp[i].vals[pre], sizeof(float)*post);
+								for(unsigned j = post; j < PLOT_MAX; j++)
+									mem[j] = handle->out0[i];
+
+								//FIXME can be made more efficient
+								if(memcmp(handle->outp[i].vals, mem, sizeof(float)*PLOT_MAX))
+									needs_refresh = true;
+
+								memcpy(handle->outp[i].vals, mem, sizeof(float)*PLOT_MAX);
+							}
 						}
 					}
 
