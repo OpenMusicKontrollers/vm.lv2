@@ -940,8 +940,8 @@ extension_data(const char* uri)
 	return NULL;
 }
 
-const LV2_Descriptor vm_nuk = {
-	.URI            = VM_PREFIX"vm",
+static const LV2_Descriptor vm_control = {
+	.URI            = VM_PREFIX"control",
 	.instantiate    = instantiate,
 	.connect_port   = connect_port,
 	.activate       = NULL,
@@ -957,7 +957,7 @@ lv2_descriptor(uint32_t index)
 	switch(index)
 	{
 		case 0:
-			return &vm_nuk;
+			return &vm_control;
 		default:
 			return NULL;
 	}

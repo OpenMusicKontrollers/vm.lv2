@@ -19,7 +19,7 @@
 
 @prefix vm:	<http://open-music-kontrollers.ch/lv2/vm#> .
 
-vm:vm
+vm:control
 	a lv2:Plugin ;
 	lv2:minorVersion @VM_MINOR_VERSION@ ;
 	lv2:microVersion @VM_MICRO_VERSION@ ;

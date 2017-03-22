@@ -294,7 +294,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 					handle->writer(handle->controller, i + 2, sizeof(float), 0, &handle->in0[i]);
 
 				const int old_window = handle->inp[i].window;
-				nk_property_int(ctx, "#", 10, &handle->inp[i].window, 100000, 1, 1.f);
+				nk_property_int(ctx, "#ms", 10, &handle->inp[i].window, 100000, 1, 1.f);
 				if(old_window != handle->inp[i].window)
 					memset(handle->inp[i].vals, 0x0, sizeof(float)*PLOT_MAX);
 			}
@@ -482,7 +482,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 				nk_labelf(ctx, NK_TEXT_LEFT, "Output %u: %+f", i, handle->out0[i]);
 
 				const int old_window = handle->outp[i].window;
-				nk_property_int(ctx, "#", 10, &handle->outp[i].window, 100000, 1, 1.f);
+				nk_property_int(ctx, "#ms", 10, &handle->outp[i].window, 100000, 1, 1.f);
 				if(old_window != handle->outp[i].window)
 					memset(handle->outp[i].vals, 0x0, sizeof(float)*PLOT_MAX);
 			}

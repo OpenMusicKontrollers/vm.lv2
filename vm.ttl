@@ -191,7 +191,7 @@ vm:opRShift
 	a rdfs:Datatype .
 
 # Plugin
-vm:vm
+vm:control
 	a lv2:Plugin,
 		lv2:ConverterPlugin ;
 	doap:name "Vm" ;
@@ -383,7 +383,7 @@ vm:vm
 
 vm:add
 	a pset:Preset ;
-		lv2:appliesTo vm:vm ;
+		lv2:appliesTo vm:control ;
 		rdfs:label "Add" ;
 	state:state [
 		vm:graph [
@@ -398,7 +398,7 @@ vm:add
 
 vm:sub
 	a pset:Preset ;
-		lv2:appliesTo vm:vm ;
+		lv2:appliesTo vm:control ;
 		rdfs:label "Subtract" ;
 	state:state [
 		vm:graph [
@@ -413,7 +413,7 @@ vm:sub
 
 vm:mul
 	a pset:Preset ;
-		lv2:appliesTo vm:vm ;
+		lv2:appliesTo vm:control ;
 		rdfs:label "Multiply" ;
 	state:state [
 		vm:graph [
@@ -428,7 +428,7 @@ vm:mul
 
 vm:div
 	a pset:Preset ;
-		lv2:appliesTo vm:vm ;
+		lv2:appliesTo vm:control ;
 		rdfs:label "Divide" ;
 	state:state [
 		vm:graph [
@@ -443,7 +443,7 @@ vm:div
 
 vm:mod
 	a pset:Preset ;
-		lv2:appliesTo vm:vm ;
+		lv2:appliesTo vm:control ;
 		rdfs:label "Modulo" ;
 	state:state [
 		vm:graph [
@@ -458,7 +458,7 @@ vm:mod
 
 vm:pow
 	a pset:Preset ;
-		lv2:appliesTo vm:vm ;
+		lv2:appliesTo vm:control ;
 		rdfs:label "Power" ;
 	state:state [
 		vm:graph [
@@ -473,7 +473,7 @@ vm:pow
 
 vm:dBFS
 	a pset:Preset ;
-		lv2:appliesTo vm:vm ;
+		lv2:appliesTo vm:control ;
 		rdfs:label "dBFS" ;
 	lv2:port [
 		lv2:symbol "control_in_0" ;
@@ -495,7 +495,7 @@ vm:dBFS
 
 vm:rand
 	a pset:Preset ;
-		lv2:appliesTo vm:vm ;
+		lv2:appliesTo vm:control ;
 		rdfs:label "Random" ;
 	state:state [
 		vm:graph [
@@ -515,7 +515,7 @@ vm:rand
 
 vm:sampleAndHold
 	a pset:Preset ;
-		lv2:appliesTo vm:vm ;
+		lv2:appliesTo vm:control ;
 		rdfs:label "Sample and hold" ;
 	state:state [
 		vm:graph [
@@ -534,7 +534,7 @@ vm:sampleAndHold
 
 vm:lfo
 	a pset:Preset ;
-		lv2:appliesTo vm:vm ;
+		lv2:appliesTo vm:control ;
 		rdfs:label "LFO" ;
 	state:state [
 		vm:graph [
