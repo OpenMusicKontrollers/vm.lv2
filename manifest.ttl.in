@@ -43,6 +43,14 @@ vm:audio
 	ui:ui vm:vm_ui ;
 	rdfs:seeAlso <vm.ttl> .
 
+vm:atom
+	a lv2:Plugin ;
+	lv2:minorVersion @VM_MINOR_VERSION@ ;
+	lv2:microVersion @VM_MICRO_VERSION@ ;
+	lv2:binary <vm@CMAKE_SHARED_MODULE_SUFFIX@> ;
+	ui:ui vm:vm_ui ;
+	rdfs:seeAlso <vm.ttl> .
+
 vm:vm_ui
 	a ui:@VM_UI_TYPE@ ;
 	ui:binary <vm_ui@CMAKE_SHARED_MODULE_SUFFIX@> ;

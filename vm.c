@@ -28,10 +28,22 @@
 #define REG_MAX   0x20
 #define REG_MASK  (REG_MAX - 1)
 
+typedef union _vm_port_t vm_port_t;
+typedef union _vm_const_port_t vm_const_port_t;
 typedef struct _vm_stack_t vm_stack_t;
 typedef struct _plughandle_t plughandle_t;
 
 typedef double num_t;
+
+union _vm_port_t {
+	float *flt;
+	LV2_Atom_Sequence *seq;
+};
+
+union _vm_const_port_t {
+	const float *flt;
+	const LV2_Atom_Sequence *seq;
+};
 
 struct _vm_stack_t {
 	num_t slots [SLOT_MAX];
@@ -51,8 +63,8 @@ struct _plughandle_t {
 
 	const LV2_Atom_Sequence *control;
 	LV2_Atom_Sequence *notify;
-	const float *in [CTRL_MAX];
-	float *out [CTRL_MAX];
+	vm_const_port_t in [CTRL_MAX];
+	vm_port_t out [CTRL_MAX];
 
 	num_t in0 [CTRL_MAX];
 	num_t out0 [CTRL_MAX];
@@ -244,7 +256,7 @@ connect_port(LV2_Handle instance, uint32_t port, void *data)
 		case 7:
 		case 8:
 		case 9:
-			handle->in[port - 2] = data;
+			handle->in[port - 2].flt = data;
 			break;
 		case 10:
 		case 11:
@@ -254,7 +266,7 @@ connect_port(LV2_Handle instance, uint32_t port, void *data)
 		case 15:
 		case 16:
 		case 17:
-			handle->out[port - 10] = data;
+			handle->out[port - 10].flt = data;
 			break;
 	}
 }
@@ -871,25 +883,25 @@ run_control(LV2_Handle instance, uint32_t nsamples)
 
 	{
 		const float *in [CTRL_MAX ] = {
-			handle->in[0],
-			handle->in[1],
-			handle->in[2],
-			handle->in[3],
-			handle->in[4],
-			handle->in[5],
-			handle->in[6],
-			handle->in[7]
+			handle->in[0].flt,
+			handle->in[1].flt,
+			handle->in[2].flt,
+			handle->in[3].flt,
+			handle->in[4].flt,
+			handle->in[5].flt,
+			handle->in[6].flt,
+			handle->in[7].flt
 		};
 
 		float *out [CTRL_MAX ] = {
-			handle->out[0],
-			handle->out[1],
-			handle->out[2],
-			handle->out[3],
-			handle->out[4],
-			handle->out[5],
-			handle->out[6],
-			handle->out[7]
+			handle->out[0].flt,
+			handle->out[1].flt,
+			handle->out[2].flt,
+			handle->out[3].flt,
+			handle->out[4].flt,
+			handle->out[5].flt,
+			handle->out[6].flt,
+			handle->out[7].flt
 		};
 
 		const bool notify = true;
@@ -910,7 +922,7 @@ run_control(LV2_Handle instance, uint32_t nsamples)
 }
 
 static void
-run_cv(LV2_Handle instance, uint32_t nsamples)
+run_cv_audio(LV2_Handle instance, uint32_t nsamples)
 {
 	plughandle_t *handle = instance;
 
@@ -938,32 +950,127 @@ run_cv(LV2_Handle instance, uint32_t nsamples)
 		handle->needs_sync = false;
 	}
 
+	//FIXME needs to be muxed with control
 	for(unsigned i = 0; i < nsamples; i++)
 	{
 		const float *in [CTRL_MAX ] = {
-			&handle->in[0][i],
-			&handle->in[1][i],
-			&handle->in[2][i],
-			&handle->in[3][i],
-			&handle->in[4][i],
-			&handle->in[5][i],
-			&handle->in[6][i],
-			&handle->in[7][i]
+			&handle->in[0].flt[i],
+			&handle->in[1].flt[i],
+			&handle->in[2].flt[i],
+			&handle->in[3].flt[i],
+			&handle->in[4].flt[i],
+			&handle->in[5].flt[i],
+			&handle->in[6].flt[i],
+			&handle->in[7].flt[i]
 		};
 
 		float *out [CTRL_MAX ] = {
-			&handle->out[0][i],
-			&handle->out[1][i],
-			&handle->out[2][i],
-			&handle->out[3][i],
-			&handle->out[4][i],
-			&handle->out[5][i],
-			&handle->out[6][i],
-			&handle->out[7][i]
+			&handle->out[0].flt[i],
+			&handle->out[1].flt[i],
+			&handle->out[2].flt[i],
+			&handle->out[3].flt[i],
+			&handle->out[4].flt[i],
+			&handle->out[5].flt[i],
+			&handle->out[6].flt[i],
+			&handle->out[7].flt[i]
 		};
 
 		const bool notify = (i == 0);
 		run_internal(handle, nsamples - 1, notify, in, out);
+	}
+
+	if(handle->ref)
+		handle->ref = lv2_atom_forge_frame_time(&handle->forge, nsamples - 1);
+	if(handle->ref)
+		handle->ref = lv2_atom_forge_long(&handle->forge, handle->off);
+
+	if(handle->ref)
+		lv2_atom_forge_pop(&handle->forge, &frame);
+	else
+		lv2_atom_sequence_clear(handle->notify);
+
+	handle->off += nsamples;
+}
+
+static void
+run_atom(LV2_Handle instance, uint32_t nsamples)
+{
+	plughandle_t *handle = instance;
+
+	const uint32_t capacity = handle->notify->atom.size;
+	LV2_Atom_Forge_Frame frame;
+	lv2_atom_forge_set_buffer(&handle->forge, (uint8_t *)handle->notify, capacity);
+	handle->ref = lv2_atom_forge_sequence_head(&handle->forge, &frame, 0);
+
+	int64_t last_t = 0;
+	LV2_ATOM_SEQUENCE_FOREACH(handle->control, ev)
+	{
+		const LV2_Atom *atom= &ev->body;
+		const LV2_Atom_Object *obj = (const LV2_Atom_Object *)&ev->body;
+
+		if(!timely_advance(&handle->timely, obj, last_t, ev->time.frames))
+			props_advance(&handle->props, &handle->forge, ev->time.frames, obj, &handle->ref);
+
+		last_t = ev->time.frames;
+	}
+	timely_advance(&handle->timely, NULL, last_t, nsamples);
+
+	if(handle->needs_sync)
+	{
+		props_set(&handle->props, &handle->forge, nsamples - 1, handle->vm_graph, &handle->ref);
+		handle->needs_sync = false;
+	}
+
+	float pin [CTRL_MAX];
+	float pout [CTRL_MAX];
+
+	for(unsigned i = 0; i < CTRL_MAX; i++)
+	{
+		pin[i] = handle->in0[i];
+		pout[i] = handle->out0[i];
+	}
+
+	const float *in [CTRL_MAX ] = {
+		&pin[0],
+		&pin[1],
+		&pin[2],
+		&pin[3],
+		&pin[4],
+		&pin[5],
+		&pin[6],
+		&pin[7]
+	};
+
+	float *out [CTRL_MAX ] = {
+		&pout[0],
+		&pout[1],
+		&pout[2],
+		&pout[3],
+		&pout[4],
+		&pout[5],
+		&pout[6],
+		&pout[7]
+	};
+
+	//FIXME needs to be muxed with control
+	for(unsigned i = 0; i < CTRL_MAX; i++)
+	{
+		LV2_ATOM_SEQUENCE_FOREACH(handle->in[i].seq, ev)
+		{
+			const LV2_Atom_Float *f32 = (const LV2_Atom_Float *)&ev->body;
+
+			//printf("got atom:Float: %u %f\n", i, f32->body);
+
+			if(f32->atom.type == handle->forge.Float)
+			{
+				pin[i] = f32->body;
+
+				const bool notify = true; //FIXME
+				run_internal(handle, nsamples - 1, notify, in, out); //FIXME use ev.time.frames
+
+				//FIXME send floats to output sequences
+			}
+		}
 	}
 
 	if(handle->ref)
@@ -1060,7 +1167,7 @@ static const LV2_Descriptor vm_cv = {
 	.instantiate    = instantiate,
 	.connect_port   = connect_port,
 	.activate       = NULL,
-	.run            = run_cv,
+	.run            = run_cv_audio,
 	.deactivate     = NULL,
 	.cleanup        = cleanup,
 	.extension_data = extension_data
@@ -1071,7 +1178,18 @@ static const LV2_Descriptor vm_audio = {
 	.instantiate    = instantiate,
 	.connect_port   = connect_port,
 	.activate       = NULL,
-	.run            = run_cv,
+	.run            = run_cv_audio,
+	.deactivate     = NULL,
+	.cleanup        = cleanup,
+	.extension_data = extension_data
+};
+
+static const LV2_Descriptor vm_atom = {
+	.URI            = VM_PREFIX"atom",
+	.instantiate    = instantiate,
+	.connect_port   = connect_port,
+	.activate       = NULL,
+	.run            = run_atom,
 	.deactivate     = NULL,
 	.cleanup        = cleanup,
 	.extension_data = extension_data
@@ -1088,6 +1206,8 @@ lv2_descriptor(uint32_t index)
 			return &vm_cv;
 		case 2:
 			return &vm_audio;
+		case 3:
+			return &vm_atom;
 
 		default:
 			return NULL;

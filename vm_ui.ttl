@@ -37,6 +37,11 @@ vm:vm_ui
 		lv2:symbol "notify" ;
 		ui:protocol atom:eventTransfer
 	] ;
+	ui:portNotification [
+		ui:plugin vm:atom ;
+		lv2:symbol "notify" ;
+		ui:protocol atom:eventTransfer
+	] ;
 	lv2:requiredFeature ui:idleInterface, urid:map, urid:unmap ;
 	lv2:optionalFeature log:log ;
   lv2:extensionData ui:idleInterface .
