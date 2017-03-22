@@ -192,6 +192,14 @@ _set_property(plughandle_t *handle, LV2_URID property)
 		handle->atom_eventTransfer, atom);
 }
 
+static const struct nk_color plot_bg_color = {
+	.r = 0x22, .g = 0x22, .b = 0x22, .a = 0xff
+};
+
+static const struct nk_color plot_fg_color = {
+	.r = 0xbb, .g = 0x66, .b = 0x00, .a = 0xff
+};
+
 static inline void
 _draw_plot(struct nk_context *ctx, const float *vals, unsigned nvals)
 {
@@ -202,10 +210,13 @@ _draw_plot(struct nk_context *ctx, const float *vals, unsigned nvals)
 	if(states != NK_WIDGET_INVALID)
 	{
     const struct nk_rect old_clip = canvas->clip;
-
 		const struct nk_rect outer = nk_pad_rect(bounds, nk_vec2(-2.f, -2.f));
-		nk_push_scissor(canvas, outer);
-		nk_fill_rect(canvas, bounds, 0.f, nk_rgb(0x22, 0x22, 0x22));
+		struct nk_rect new_clip;
+    nk_unify(&new_clip, &old_clip, outer.x, outer.y,
+			outer.x + outer.w, outer.y + outer.h);
+
+		nk_push_scissor(canvas, new_clip);
+		nk_fill_rect(canvas, bounds, 0.f, plot_bg_color);
 		nk_stroke_rect(canvas, bounds, 0.f, 1.f, ctx->style.window.border_color);
 
 		float mem [PLOT_MAX*2];
@@ -222,7 +233,10 @@ _draw_plot(struct nk_context *ctx, const float *vals, unsigned nvals)
 			mem[i2 + 1] = y1;
 		}
 
-		nk_stroke_polyline(canvas, mem, PLOT_MAX, 1.f, nk_rgb(0xcc, 0xcc, 0xcc));
+		const float yh = bounds.y + 0.5f*bounds.h;
+		nk_stroke_line(canvas, bounds.x, yh, bounds.x + bounds.w, yh, 1.f,
+			ctx->style.window.border_color);
+		nk_stroke_polyline(canvas, mem, PLOT_MAX, 1.f, plot_fg_color);
 		nk_push_scissor(canvas, old_clip);
 	}
 }
