@@ -335,19 +335,9 @@ run(LV2_Handle instance, uint32_t nsamples)
 					const num_t c = cmd->i32;
 					_stack_push(&handle->stack, c);
 				} break;
-				case COMMAND_LONG:
-				{
-					const num_t c = cmd->i64;
-					_stack_push(&handle->stack, c);
-				} break;
 				case COMMAND_FLOAT:
 				{
 					const num_t c = cmd->f32;
-					_stack_push(&handle->stack, c);
-				} break;
-				case COMMAND_DOUBLE:
-				{
-					const num_t c = cmd->f64;
 					_stack_push(&handle->stack, c);
 				} break;
 				case COMMAND_OPCODE:

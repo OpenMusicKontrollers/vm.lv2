@@ -249,6 +249,15 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 	handle->dy = 20.f * nk_pugl_get_scale(&handle->win);
 	const float dy = handle->dy;
 
+	// mouse sensitivity for dragable property widgets
+	const bool has_control = nk_input_is_key_down(&ctx->input, NK_KEY_CTRL);
+	const bool has_shift = nk_input_is_key_down(&ctx->input, NK_KEY_SHIFT);
+	float scl = 1.f;
+	if(has_control)
+		scl /= 4;
+	if(has_shift)
+		scl /= 4;
+
 	if(nk_begin(ctx, "Vm", wbounds, NK_WINDOW_NO_SCROLLBAR))
 	{
 		nk_window_set_bounds(ctx, wbounds);
@@ -263,14 +272,22 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 
 		if(nk_group_begin(ctx, "Inputs", NK_WINDOW_TITLE | NK_WINDOW_BORDER))
 		{
+			float stp;
+			float fpp;
+
 			for(unsigned i = 0; i < CTRL_MAX; i++)
 			{
 				nk_layout_row_dynamic(ctx, dy*4, 1);
 				_draw_plot(ctx, handle->inp[i].vals, PLOT_MAX);
 
 				nk_layout_row_dynamic(ctx, dy, 1);
+				if(i == 0) // calculate only once
+				{
+					stp = scl * VM_STP;
+					fpp = scl * VM_RNG / nk_widget_width(ctx);
+				}
 				const float old_val = handle->in0[i];
-				nk_property_float(ctx, input_labels[i], VM_MIN, &handle->in0[i], VM_MAX, 1.f, 1.f);
+				nk_property_float(ctx, input_labels[i], VM_MIN, &handle->in0[i], VM_MAX, stp, fpp);
 				if(old_val != handle->in0[i])
 					handle->writer(handle->controller, i + 2, sizeof(float), 0, &handle->in0[i]);
 			}
@@ -282,6 +299,9 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 		{
 			nk_layout_row_dynamic(ctx, dy, 2);
 			bool sync = false;
+
+			const float stp = scl * VM_STP;
+			const float fpp = scl * VM_RNG / nk_widget_width(ctx);
 
 			for(unsigned i = 0; i < ITEMS_MAX; i++)
 			{
@@ -314,40 +334,20 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 					case COMMAND_INT:
 					{
 						int i32 = cmd->i32;
-						nk_property_int(ctx, "#", VM_MIN, &i32, VM_MAX, 1, 1.f);
+						nk_property_int(ctx, "#", INT32_MIN, &i32, INT32_MAX, 1, 1.f);
 						if(i32 != cmd->i32)
 						{
 							cmd->i32 = i32;
 							sync = true;
 						}
 					} break;
-					case COMMAND_LONG:
-					{
-						int i64 = cmd->i64;
-						nk_property_int(ctx, "#", VM_MIN, &i64, VM_MAX, 1, 1.f);
-						if(i64 != cmd->i64)
-						{
-							cmd->i64 = i64;
-							sync = true;
-						}
-					} break;
 					case COMMAND_FLOAT:
 					{
 						float f32 = cmd->f32;
-						nk_property_float(ctx, "#", VM_MIN, &f32, VM_MAX, 1.f, 1.f);
+						nk_property_float(ctx, "#", -HUGE, &f32, HUGE, stp, fpp);
 						if(f32 != cmd->f32)
 						{
 							cmd->f32 = f32;
-							sync = true;
-						}
-					} break;
-					case COMMAND_DOUBLE:
-					{
-						double f64 = cmd->f64;
-						nk_property_double(ctx, "#", VM_MIN, &f64, VM_MAX, 1.f, 1.f);
-						if(f64 != cmd->f64)
-						{
-							cmd->f64 = f64;
 							sync = true;
 						}
 					} break;

@@ -52,6 +52,7 @@
 
 #define VM_MIN -1.f
 #define VM_MAX 1.f
+#define VM_STP 0.01f
 #define VM_RNG (VM_MAX - VM_MIN)
 #define VM_VIS (VM_RNG * 1.1f)
 
@@ -130,9 +131,7 @@ enum _vm_command_enum_t {
 	COMMAND_OPCODE,
 	COMMAND_BOOL,
 	COMMAND_INT,
-	COMMAND_LONG,
 	COMMAND_FLOAT,
-	COMMAND_DOUBLE,
 
 	COMMAND_MAX,
 };
@@ -170,9 +169,7 @@ static const char *command_labels [COMMAND_MAX] = {
 	[COMMAND_OPCODE] = "Op Code"	,
 	[COMMAND_BOOL]   = "Boolean"	,
 	[COMMAND_INT]    = "Integer"	,
-	[COMMAND_LONG]   = "Long"	,
 	[COMMAND_FLOAT]  = "Float"	,
-	[COMMAND_DOUBLE] = "Double"
 };
 
 static const vm_api_def_t vm_api_def [OP_MAX] = {
@@ -557,20 +554,10 @@ vm_serialize(vm_api_impl_t *impl, LV2_Atom_Forge *forge, const vm_command_t *cmd
 				if(ref)
 					ref = lv2_atom_forge_int(forge, cmd->i32);
 			} break;
-			case COMMAND_LONG:
-			{
-				if(ref)
-					ref = lv2_atom_forge_long(forge, cmd->i64);
-			} break;
 			case COMMAND_FLOAT:
 			{
 				if(ref)
 					ref = lv2_atom_forge_float(forge, cmd->f32);
-			} break;
-			case COMMAND_DOUBLE:
-			{
-				if(ref)
-					ref = lv2_atom_forge_double(forge, cmd->f64);
 			} break;
 			case COMMAND_OPCODE:
 			{
@@ -621,7 +608,7 @@ vm_deserialize(vm_api_impl_t *impl, LV2_Atom_Forge *forge,
 		}
 		else if(item->type == forge->Long)
 		{
-			cmd->type = COMMAND_LONG;
+			cmd->type = COMMAND_INT;
 			cmd->i64 = ((const LV2_Atom_Long *)item)->body;
 		}
 		else if(item->type == forge->Float)
@@ -631,7 +618,7 @@ vm_deserialize(vm_api_impl_t *impl, LV2_Atom_Forge *forge,
 		}
 		else if(item->type == forge->Double)
 		{
-			cmd->type = COMMAND_DOUBLE;
+			cmd->type = COMMAND_FLOAT;
 			cmd->f64 = ((const LV2_Atom_Double *)item)->body;
 		}
 		else if(item->type == forge->URID)
