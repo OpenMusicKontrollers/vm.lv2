@@ -71,7 +71,7 @@ struct _plughandle_t {
 
 	int64_t off;
 
-	command_t cmds [ITEMS_MAX];
+	vm_command_t cmds [ITEMS_MAX];
 
 	timely_t timely;
 };
@@ -303,7 +303,7 @@ run(LV2_Handle instance, uint32_t nsamples)
 
 		for(unsigned i = 0; i < ITEMS_MAX; i++)
 		{
-			command_t *cmd = &handle->cmds[i];
+			vm_command_t *cmd = &handle->cmds[i];
 			bool terminate = false;
 
 			switch(cmd->type)

@@ -87,7 +87,7 @@ struct _plughandle_t {
 
 	float sample_rate;
 
-	command_t cmds [ITEMS_MAX];
+	vm_command_t cmds [ITEMS_MAX];
 };
 
 static const char *input_labels [CTRL_MAX] = {
@@ -276,10 +276,10 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 
 			for(unsigned i = 0; i < ITEMS_MAX; i++)
 			{
-				command_t *cmd = &handle->cmds[i];
+				vm_command_t *cmd = &handle->cmds[i];
 				bool terminate = false;
 
-				const command_enum_t old_cmd_type = cmd->type;
+				const vm_command_enum_t old_cmd_type = cmd->type;
 				int cmd_type = old_cmd_type;
 				nk_combobox(ctx, command_labels, COMMAND_MAX, &cmd_type,
 					dy, nk_vec2(nk_widget_width(ctx), dy*14));

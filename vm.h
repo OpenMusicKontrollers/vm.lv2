@@ -51,24 +51,12 @@
 #include <props.lv2/props.h>
 
 typedef enum _vm_status_t vm_status_t;
-typedef enum _opcode_enum_t opcode_enum_t;
-typedef enum _command_enum_t command_enum_t;
-typedef struct _command_t command_t;
-typedef struct _plugstate_t plugstate_t;
+typedef enum _vm_opcode_enum_t vm_opcode_enum_t;
+typedef enum _vm_command_enum_t vm_command_enum_t;
+typedef struct _vm_command_t vm_command_t;
 typedef struct _vm_api_def_t vm_api_def_t;
 typedef struct _vm_api_impl_t vm_api_impl_t;
-
-struct _vm_api_def_t {
-	const char *uri;
-	const char *mnemo;
-	const char *label;
-	unsigned npops;
-	unsigned npushs;
-};
-
-struct _vm_api_impl_t {
-	LV2_URID urid;
-};
+typedef struct _plugstate_t plugstate_t;
 
 enum _vm_status_t {
 	VM_STATUS_STATIC   = (0 << 0),
@@ -76,7 +64,7 @@ enum _vm_status_t {
 	VM_STATUS_HAS_RAND = (1 << 2),
 };
 
-enum _opcode_enum_t{
+enum _vm_opcode_enum_t {
 	OP_NOP = 0,
 
 	OP_CTRL,
@@ -129,7 +117,7 @@ enum _opcode_enum_t{
 	OP_MAX,
 };
 
-enum _command_enum_t {
+enum _vm_command_enum_t {
 	COMMAND_NOP = 0,
 
 	COMMAND_OPCODE,
@@ -142,16 +130,28 @@ enum _command_enum_t {
 	COMMAND_MAX,
 };
 
-struct _command_t {
-	command_enum_t type;
+struct _vm_command_t {
+	vm_command_enum_t type;
 
 	union {
 		int32_t i32;
 		int64_t i64;
 		float f32;
 		double f64;
-		opcode_enum_t op;
+		vm_opcode_enum_t op;
 	};
+};
+
+struct _vm_api_def_t {
+	const char *uri;
+	const char *mnemo;
+	const char *label;
+	unsigned npops;
+	unsigned npushs;
+};
+
+struct _vm_api_impl_t {
+	LV2_URID urid;
 };
 
 struct _plugstate_t {
@@ -509,7 +509,7 @@ vm_api_init(vm_api_impl_t *impl, LV2_URID_Map *map)
 	}
 }
 
-static inline opcode_enum_t
+static inline vm_opcode_enum_t
 vm_api_unmap(vm_api_impl_t *impl, LV2_URID urid)
 {
 	for(unsigned op = 0; op < OP_MAX; op++)
@@ -522,20 +522,20 @@ vm_api_unmap(vm_api_impl_t *impl, LV2_URID urid)
 }
 
 static inline LV2_URID
-vm_api_map(vm_api_impl_t *impl, opcode_enum_t op)
+vm_api_map(vm_api_impl_t *impl, vm_opcode_enum_t op)
 {
 	return impl[op].urid;
 }
 
 static inline LV2_Atom_Forge_Ref
-vm_serialize(vm_api_impl_t *impl, LV2_Atom_Forge *forge, const command_t *cmds)
+vm_serialize(vm_api_impl_t *impl, LV2_Atom_Forge *forge, const vm_command_t *cmds)
 {
 	LV2_Atom_Forge_Frame frame;
 	LV2_Atom_Forge_Ref ref = lv2_atom_forge_tuple(forge, &frame);
 
 	for(unsigned i = 0; i < ITEMS_MAX; i++)
 	{
-		const command_t *cmd = &cmds[i];
+		const vm_command_t *cmd = &cmds[i];
 		bool terminate = false;
 
 		switch(cmd->type)
@@ -591,10 +591,10 @@ vm_serialize(vm_api_impl_t *impl, LV2_Atom_Forge *forge, const command_t *cmds)
 
 static inline vm_status_t
 vm_deserialize(vm_api_impl_t *impl, LV2_Atom_Forge *forge,
-	command_t *cmds, uint32_t size, const LV2_Atom *body)
+	vm_command_t *cmds, uint32_t size, const LV2_Atom *body)
 {
-	command_t *cmd = cmds;
-	memset(cmds, 0x0, sizeof(command_t)*ITEMS_MAX);
+	vm_command_t *cmd = cmds;
+	memset(cmds, 0x0, sizeof(vm_command_t)*ITEMS_MAX);
 
 	vm_status_t state = VM_STATUS_STATIC;
 
