@@ -259,6 +259,10 @@ connect_port(LV2_Handle instance, uint32_t port, void *data)
 	}
 }
 
+#define MIN(a, b)     (a < b ? a : b)
+#define MAX(a, b)     (a > b ? a : b)
+#define CLIP(a, v, b) MIN(MAX(a, v), b)
+
 static void
 run(LV2_Handle instance, uint32_t nsamples)
 {
@@ -290,10 +294,23 @@ run(LV2_Handle instance, uint32_t nsamples)
 
 	for(unsigned i = 0; i < CTRL_MAX; i++)
 	{
-		if(handle->in0[i] != *handle->in[i])
+		const float in1 = CLIP(VM_MIN, *handle->in[i], VM_MAX);
+		if(handle->in0[i] != in1)
 		{
 			handle->needs_recalc = true;
-			handle->in0[i] = *handle->in[i];
+			handle->in0[i] = in1;
+
+			LV2_Atom_Forge_Frame tup_frame;
+			if(handle->ref)
+				handle->ref = lv2_atom_forge_frame_time(&handle->forge, nsamples - 1);
+			if(handle->ref)
+				handle->ref = lv2_atom_forge_tuple(&handle->forge, &tup_frame);
+			if(handle->ref)
+				handle->ref = lv2_atom_forge_int(&handle->forge, i + 2);
+			if(handle->ref)
+				handle->ref = lv2_atom_forge_float(&handle->forge, in1);
+			if(handle->ref)
+				lv2_atom_forge_pop(&handle->forge, &tup_frame);
 		}
 	}
 
@@ -668,12 +685,13 @@ run(LV2_Handle instance, uint32_t nsamples)
 		handle->needs_recalc = false;
 	}
 
-	//FIXME handle also inputs
 	for(unsigned i = 0; i < CTRL_MAX; i++)
 	{
-		if(*handle->out[i] != handle->out0[i])
+		const float out1 = CLIP(VM_MIN, handle->out0[i], VM_MAX);
+
+		if(*handle->out[i] != out1)
 		{
-			*handle->out[i] = handle->out0[i];;
+			*handle->out[i] = out1;
 
 			LV2_Atom_Forge_Frame tup_frame;
 			if(handle->ref)
@@ -683,7 +701,7 @@ run(LV2_Handle instance, uint32_t nsamples)
 			if(handle->ref)
 				handle->ref = lv2_atom_forge_int(&handle->forge, i + 10);
 			if(handle->ref)
-				handle->ref = lv2_atom_forge_float(&handle->forge, handle->out0[i]);
+				handle->ref = lv2_atom_forge_float(&handle->forge, out1);
 			if(handle->ref)
 				lv2_atom_forge_pop(&handle->forge, &tup_frame);
 		}
