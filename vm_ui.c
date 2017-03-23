@@ -336,23 +336,35 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 				}
 				else
 				{
-					if(nk_button_label(ctx, "+"))
+					if(nk_button_label(ctx, "+")) // insert cmd
 					{
-						//FIXME insert line
+						for(unsigned j = ITEMS_MAX - 1; j > i; j--)
+							handle->cmds[j] = handle->cmds[j - 1];
+
+						cmd->type = COMMAND_OPCODE;
+						cmd->i32 = 0;
+						sync = true;
 					}
 
-					if(nk_button_label(ctx, "-"))
+					if(nk_button_label(ctx, "-")) // remove cmd
 					{
-						//FIXME remove line
+						for(unsigned j = i; j < ITEMS_MAX - 1; j++)
+							handle->cmds[j] = handle->cmds[j + 1];
+
+						sync = true;
 					}
 
 					if(i == 0)
 					{
 						nk_spacing(ctx, 1);
 					}
-					else if(nk_button_label(ctx, "^"))
+					else if(nk_button_label(ctx, "^")) // swap cmd with one above
 					{
-						//FIXME swap line
+						const vm_command_t tmp = handle->cmds[i];
+						handle->cmds[i] = handle->cmds[i - 1];
+						handle->cmds[i - 1] = tmp;
+
+						sync = true;
 					}
 				}
 
