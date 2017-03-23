@@ -292,7 +292,7 @@ run_internal(plughandle_t *handle, uint32_t frames, bool notify,
 			handle->needs_recalc = true;
 			handle->in0[i] = in1;
 
-			if(notify)
+			if(notify) //FIXME better report e.g. maximum
 			{
 				LV2_Atom_Forge_Frame tup_frame;
 				if(handle->ref)
@@ -846,7 +846,7 @@ loop: {
 		{
 			*out[i] = out1;
 
-			if(notify)
+			if(notify) //FIXME better report e.g. maximum
 			{
 				LV2_Atom_Forge_Frame tup_frame;
 				if(handle->ref)

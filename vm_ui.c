@@ -89,6 +89,9 @@ struct _plughandle_t {
 	float in1 [CTRL_MAX];
 	float out1 [CTRL_MAX];
 
+	float in2 [CTRL_MAX];
+	float out2 [CTRL_MAX];
+
 	int64_t off;
 	plot_t inp [CTRL_MAX];
 	plot_t outp [CTRL_MAX];
@@ -276,8 +279,6 @@ dBFS6(float peak)
 static inline void
 _draw_mixer(struct nk_context *ctx, float peak)
 {
-	peak = dBFS6(peak);
-
 	struct nk_rect bounds;
 	const enum nk_widget_layout_states states = nk_widget(&bounds, ctx);
 	if(states != NK_WIDGET_INVALID)
@@ -292,41 +293,45 @@ _draw_mixer(struct nk_context *ctx, float peak)
 		struct nk_rect outline;
 		const uint8_t alph = 0x7f;
 
-		// <= -6dBFS
+		const float ox = ctx->style.font->height/2 + ctx->style.property.border + ctx->style.property.padding.x;
+		const float oy = ctx->style.property.border + ctx->style.property.padding.y;
+		bounds.x += ox;
+		bounds.y += oy;
+		bounds.w -= 2*ox;
+		bounds.h -= 2*oy;
+		outline = bounds;
+
+		if(peak > 0.f) //FIXME use threshold > 0.f
 		{
-			const float dbfs = NK_MIN(peak, mx1);
-			const uint8_t dcol = 0xff * dbfs / mx1;
-			const struct nk_color left = nk_rgba(0x00, 0xff, 0xff, alph);
-			const struct nk_color bottom = left;
-			const struct nk_color right = nk_rgba(dcol, 0xff, 0xff-dcol, alph);
-			const struct nk_color top = right;
+			// <= -6dBFS
+			{
+				const float dbfs = NK_MIN(peak, mx1);
+				const uint8_t dcol = 0xff * dbfs / mx1;
+				const struct nk_color left = nk_rgba(0x00, 0xff, 0xff, alph);
+				const struct nk_color bottom = left;
+				const struct nk_color right = nk_rgba(dcol, 0xff, 0xff-dcol, alph);
+				const struct nk_color top = right;
 
-			const float ox = ctx->style.font->height/2 + ctx->style.property.border + ctx->style.property.padding.x;
-			const float oy = ctx->style.property.border + ctx->style.property.padding.y;
-			bounds.x += ox;
-			bounds.y += oy;
-			bounds.w -= 2*ox;
-			bounds.h -= 2*oy;
-			outline = bounds;
-			bounds.w *= dbfs;
+				bounds.w *= dbfs;
 
-			nk_fill_rect_multi_color(canvas, bounds, left, top, right, bottom);
-		}
+				nk_fill_rect_multi_color(canvas, bounds, left, top, right, bottom);
+			}
 
-		// > 6dBFS
-		if(peak > mx1)
-		{
-			const float dbfs = peak - mx1;
-			const uint8_t dcol = 0xff * dbfs / mx2;
-			const struct nk_color left = nk_rgba(0xff, 0xff, 0x00, alph);
-			const struct nk_color bottom = left;
-			const struct nk_color right = nk_rgba(0xff, 0xff - dcol, 0x00, alph);
-			const struct nk_color top = right;
+			// > 6dBFS
+			if(peak > mx1)
+			{
+				const float dbfs = peak - mx1;
+				const uint8_t dcol = 0xff * dbfs / mx2;
+				const struct nk_color left = nk_rgba(0xff, 0xff, 0x00, alph);
+				const struct nk_color bottom = left;
+				const struct nk_color right = nk_rgba(0xff, 0xff - dcol, 0x00, alph);
+				const struct nk_color top = right;
 
-			bounds = outline;
-			bounds.x += bounds.w * mx1;
-			bounds.w *= dbfs;
-			nk_fill_rect_multi_color(canvas, bounds, left, top, right, bottom);
+				bounds = outline;
+				bounds.x += bounds.w * mx1;
+				bounds.w *= dbfs;
+				nk_fill_rect_multi_color(canvas, bounds, left, top, right, bottom);
+			}
 		}
 
 		// draw 6dBFS lines from -60 to +6
@@ -426,7 +431,11 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 				else if(handle->vm_plug == VM_PLUG_AUDIO)
 				{
 					_draw_mixer(ctx, handle->in1[i]);
-					handle->in1[i] *= 0.9; //FIXME make dependent on ui:updateRate
+
+					if(handle->in2[i] > handle->in1[i])
+						handle->in1[i] = handle->in2[i];
+					else
+						handle->in1[i] -= (handle->in1[i] - handle->in2[i]) * 0.1; //FIXME make dependent on ui:updateRate
 				}
 
 				const int old_window = handle->inp[i].window;
@@ -669,7 +678,11 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 				else if(handle->vm_plug == VM_PLUG_AUDIO)
 				{
 					_draw_mixer(ctx, handle->out1[i]);
-					handle->out1[i] *= 0.9; //FIXME make dependent on ui:updateRate
+
+					if(handle->out2[i] > handle->out1[i])
+						handle->out1[i] = handle->out2[i];
+					else
+						handle->out1[i] -= (handle->out1[i] - handle->out2[i]) * 0.1; //FIXME make dependent on ui:updateRate
 				}
 
 				const int old_window = handle->outp[i].window;
@@ -919,10 +932,7 @@ port_event(LV2UI_Handle instance, uint32_t index, uint32_t size,
 						handle->in0[j] = val->body;
 
 						if(handle->vm_plug == VM_PLUG_AUDIO)
-						{
-							if(val->body > handle->in1[j])
-								handle->in1[j] = val->body;
-						}
+							handle->in2[j] = dBFS6(val->body);
 					}
 					else
 					{
@@ -930,10 +940,7 @@ port_event(LV2UI_Handle instance, uint32_t index, uint32_t size,
 						handle->out0[j] = val->body;
 
 						if(handle->vm_plug == VM_PLUG_AUDIO)
-						{
-							if(val->body > handle->out1[j])
-								handle->out1[j] = val->body;
-						}
+							handle->out2[j] = dBFS6(val->body);
 					}
 				}
 				else // !tuple
