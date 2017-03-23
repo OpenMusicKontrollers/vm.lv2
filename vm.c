@@ -56,6 +56,8 @@ struct _plughandle_t {
 	LV2_Atom_Forge forge;
 	LV2_Atom_Forge_Ref ref;
 
+	vm_plug_enum_t vm_plug;
+
 	LV2_URID vm_graph;
 
 	LV2_Log_Log *log;
@@ -181,6 +183,8 @@ instantiate(const LV2_Descriptor* descriptor, num_t rate,
 	if(!handle)
 		return NULL;
 
+	handle->vm_plug = vm_plug_type(descriptor->URI);
+
 	for(unsigned i=0; features[i]; i++)
 	{
 		if(!strcmp(features[i]->URI, LV2_URID__map))
@@ -279,7 +283,9 @@ run_internal(plughandle_t *handle, uint32_t frames, bool notify,
 {
 	for(unsigned i = 0; i < CTRL_MAX; i++)
 	{
-		const float in1 = CLIP(VM_MIN, *in[i], VM_MAX);
+		const float in1 = (handle->vm_plug == VM_PLUG_AUDIO)
+			? *in[i] // don't clip audio
+			: CLIP(VM_MIN, *in[i], VM_MAX);
 
 		if(handle->in0[i] != in1)
 		{
@@ -832,7 +838,9 @@ loop: {
 
 	for(unsigned i = 0; i < CTRL_MAX; i++)
 	{
-		const float out1 = CLIP(VM_MIN, handle->out0[i], VM_MAX);
+		const float out1 = (handle->vm_plug == VM_PLUG_AUDIO)
+			? handle->out0[i] // don't clip audio
+			:CLIP(VM_MIN, handle->out0[i], VM_MAX);
 
 		if(*out[i] != out1)
 		{

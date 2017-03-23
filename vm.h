@@ -59,6 +59,7 @@
 
 #include <props.lv2/props.h>
 
+typedef enum _vm_plug_enum_t vm_plug_enum_t;
 typedef enum _vm_status_t vm_status_t;
 typedef enum _vm_opcode_enum_t vm_opcode_enum_t;
 typedef enum _vm_command_enum_t vm_command_enum_t;
@@ -66,6 +67,13 @@ typedef struct _vm_command_t vm_command_t;
 typedef struct _vm_api_def_t vm_api_def_t;
 typedef struct _vm_api_impl_t vm_api_impl_t;
 typedef struct _plugstate_t plugstate_t;
+
+enum _vm_plug_enum_t {
+	VM_PLUG_CONTROL = 0,
+	VM_PLUG_CV,
+	VM_PLUG_AUDIO,
+	VM_PLUG_ATOM
+};
 
 enum _vm_status_t {
 	VM_STATUS_STATIC   = (0 << 0),
@@ -796,6 +804,21 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.npushs = 1
 	},
 };
+
+static vm_plug_enum_t
+vm_plug_type(const char *plugin_uri)
+{
+	if(!strcmp(plugin_uri, VM_PREFIX"control"))
+		return VM_PLUG_CONTROL;
+	else if(!strcmp(plugin_uri, VM_PREFIX"cv"))
+		return VM_PLUG_CV;
+	else if(!strcmp(plugin_uri, VM_PREFIX"audio"))
+		return VM_PLUG_AUDIO;
+	else if(!strcmp(plugin_uri, VM_PREFIX"atom"))
+		return VM_PLUG_ATOM;
+
+	return VM_PLUG_CONTROL;
+}
 
 static inline void
 vm_api_init(vm_api_impl_t *impl, LV2_URID_Map *map)

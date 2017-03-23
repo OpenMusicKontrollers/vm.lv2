@@ -59,6 +59,8 @@ struct _plughandle_t {
 	LV2_URID_Unmap *unmap;
 	LV2_Atom_Forge forge;
 
+	vm_plug_enum_t vm_plug;
+
 	LV2_URID atom_eventTransfer;
 	LV2_URID vm_graph;
 
@@ -83,6 +85,9 @@ struct _plughandle_t {
 
 	float in0 [CTRL_MAX];
 	float out0 [CTRL_MAX];
+
+	float in1 [CTRL_MAX];
+	float out1 [CTRL_MAX];
 
 	int64_t off;
 	plot_t inp [CTRL_MAX];
@@ -252,6 +257,99 @@ _draw_plot(struct nk_context *ctx, const float *vals)
 	}
 }
 
+static const int dBFS6_min = -54;
+static const int dBFS6_max = 6;
+static const int dBFS6_rng = dBFS6_max - dBFS6_min;
+static const int dBFS6_div = 2;
+
+static const float mx1 = (float)(dBFS6_rng - 2*dBFS6_max) / dBFS6_rng;
+static const float mx2 = (float)(2*dBFS6_max) / dBFS6_rng;
+
+static inline float
+dBFS6(float peak)
+{
+	const float d = dBFS6_max + 20.f * log10f(fabsf(peak) / dBFS6_div);
+	const float e = (d - dBFS6_min) / dBFS6_rng;
+	return NK_CLAMP(0.f, e, 1.f);
+}
+
+static inline void
+_draw_mixer(struct nk_context *ctx, float peak)
+{
+	peak = dBFS6(peak);
+
+	struct nk_rect bounds;
+	const enum nk_widget_layout_states states = nk_widget(&bounds, ctx);
+	if(states != NK_WIDGET_INVALID)
+	{
+		struct nk_command_buffer *canvas = nk_window_get_canvas(ctx);
+
+		const struct nk_color bg = ctx->style.property.normal.data.color;
+		nk_fill_rect(canvas, bounds, ctx->style.property.rounding, bg);
+		nk_stroke_rect(canvas, bounds, ctx->style.property.rounding, ctx->style.property.border, bg);
+
+		const struct nk_rect orig = bounds;
+		struct nk_rect outline;
+		const uint8_t alph = 0x7f;
+
+		// <= -6dBFS
+		{
+			const float dbfs = NK_MIN(peak, mx1);
+			const uint8_t dcol = 0xff * dbfs / mx1;
+			const struct nk_color left = nk_rgba(0x00, 0xff, 0xff, alph);
+			const struct nk_color bottom = left;
+			const struct nk_color right = nk_rgba(dcol, 0xff, 0xff-dcol, alph);
+			const struct nk_color top = right;
+
+			const float ox = ctx->style.font->height/2 + ctx->style.property.border + ctx->style.property.padding.x;
+			const float oy = ctx->style.property.border + ctx->style.property.padding.y;
+			bounds.x += ox;
+			bounds.y += oy;
+			bounds.w -= 2*ox;
+			bounds.h -= 2*oy;
+			outline = bounds;
+			bounds.w *= dbfs;
+
+			nk_fill_rect_multi_color(canvas, bounds, left, top, right, bottom);
+		}
+
+		// > 6dBFS
+		if(peak > mx1)
+		{
+			const float dbfs = peak - mx1;
+			const uint8_t dcol = 0xff * dbfs / mx2;
+			const struct nk_color left = nk_rgba(0xff, 0xff, 0x00, alph);
+			const struct nk_color bottom = left;
+			const struct nk_color right = nk_rgba(0xff, 0xff - dcol, 0x00, alph);
+			const struct nk_color top = right;
+
+			bounds = outline;
+			bounds.x += bounds.w * mx1;
+			bounds.w *= dbfs;
+			nk_fill_rect_multi_color(canvas, bounds, left, top, right, bottom);
+		}
+
+		// draw 6dBFS lines from -60 to +6
+		for(unsigned i = 0; i <= dBFS6_rng; i += dBFS6_max)
+		{
+			const bool is_zero = (i == dBFS6_rng - dBFS6_max);
+			const float dx = outline.w * i / dBFS6_rng;
+
+			const float x0 = outline.x + dx;
+			const float y0 = is_zero ? orig.y + 2.f : outline.y;
+
+			const float border = (is_zero ? 2.f : 1.f) * ctx->style.window.group_border;
+
+			const float x1 = x0;
+			const float y1 = is_zero ? orig.y + orig.h - 2.f : outline.y + outline.h;
+
+			nk_stroke_line(canvas, x0, y0, x1, y1, border, ctx->style.window.group_border_color);
+		}
+
+		nk_stroke_rect(canvas, outline, 0.f, ctx->style.window.group_border, ctx->style.window.group_border_color);
+	}
+}
+
 static void
 _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 {
@@ -292,15 +390,25 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 				_draw_plot(ctx, handle->inp[i].vals);
 
 				nk_layout_row_dynamic(ctx, dy, 2);
-				if(i == 0) // calculate only once
+				if(  (handle->vm_plug == VM_PLUG_CONTROL)
+					|| (handle->vm_plug == VM_PLUG_CV)
+					|| (handle->vm_plug == VM_PLUG_ATOM) )
 				{
-					stp = scl * VM_STP;
-					fpp = scl * VM_RNG / nk_widget_width(ctx);
+					if(i == 0) // calculate only once
+					{
+						stp = scl * VM_STP;
+						fpp = scl * VM_RNG / nk_widget_width(ctx);
+					}
+					const float old_val = handle->in0[i];
+					nk_property_float(ctx, input_labels[i], VM_MIN, &handle->in0[i], VM_MAX, stp, fpp);
+					if(old_val != handle->in0[i])
+						handle->writer(handle->controller, i + 2, sizeof(float), 0, &handle->in0[i]);
 				}
-				const float old_val = handle->in0[i];
-				nk_property_float(ctx, input_labels[i], VM_MIN, &handle->in0[i], VM_MAX, stp, fpp);
-				if(old_val != handle->in0[i])
-					handle->writer(handle->controller, i + 2, sizeof(float), 0, &handle->in0[i]);
+				else if(handle->vm_plug == VM_PLUG_AUDIO)
+				{
+					_draw_mixer(ctx, handle->in1[i]);
+					handle->in1[i] *= 0.9; //FIXME make dependent on ui:updateRate
+				}
 
 				const int old_window = handle->inp[i].window;
 				nk_property_int(ctx, ms_label, 10, &handle->inp[i].window, 100000, 1, 1.f);
@@ -534,7 +642,17 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 				_draw_plot(ctx, handle->outp[i].vals);
 
 				nk_layout_row_dynamic(ctx, dy, 2);
-				nk_labelf(ctx, NK_TEXT_LEFT, "Out %u: %+f", i, handle->out0[i]);
+				if(  (handle->vm_plug == VM_PLUG_CONTROL)
+					|| (handle->vm_plug == VM_PLUG_CV)
+					|| (handle->vm_plug == VM_PLUG_ATOM) )
+				{
+					nk_labelf(ctx, NK_TEXT_LEFT, "Out %u: %+f", i, handle->out0[i]);
+				}
+				else if(handle->vm_plug == VM_PLUG_AUDIO)
+				{
+					_draw_mixer(ctx, handle->out1[i]);
+					handle->out1[i] *= 0.9; //FIXME make dependent on ui:updateRate
+				}
 
 				const int old_window = handle->outp[i].window;
 				nk_property_int(ctx, ms_label, 10, &handle->outp[i].window, 100000, 1, 1.f);
@@ -558,6 +676,8 @@ instantiate(const LV2UI_Descriptor *descriptor, const char *plugin_uri,
 	plughandle_t *handle = calloc(1, sizeof(plughandle_t));
 	if(!handle)
 		return NULL;
+
+	handle->vm_plug = vm_plug_type(plugin_uri);
 
 	void *parent = NULL;
 	LV2UI_Resize *host_resize = NULL;
@@ -776,9 +896,27 @@ port_event(LV2UI_Handle instance, uint32_t index, uint32_t size,
 					const LV2_Atom_Float *val = buf + 8 + 16;
 
 					if(idx->body < 10)
-						handle->in0[idx->body - 2] = val->body;
+					{
+						const unsigned j = idx->body - 2;
+
+						if(handle->vm_plug == VM_PLUG_AUDIO)
+						{
+							handle->in0[j] = val->body;
+							if(val->body > handle->in1[j])
+								handle->in1[j] = val->body;
+						}
+					}
 					else
-						handle->out0[idx->body - 10] = val->body;
+					{
+						const unsigned j = idx->body - 10;
+
+						if(handle->vm_plug == VM_PLUG_AUDIO)
+						{
+							handle->out0[j] = val->body;
+							if(val->body > handle->out1[j])
+								handle->out1[j] = val->body;
+						}
+					}
 				}
 				else // !tuple
 				{

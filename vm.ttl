@@ -608,136 +608,96 @@ vm:audio
 		lv2:index 2 ;
 		lv2:symbol "audio_in_0" ;
 		lv2:name "Audio In 0" ;
-		lv2:minimum -1.0;
-		lv2:maximum 1.0;
-		lv2:default 0.0;
 	] , [
 	  a lv2:InputPort,
 			lv2:AudioPort;
 		lv2:index 3 ;
 		lv2:symbol "audio_in_1" ;
 		lv2:name "Audio In 1" ;
-		lv2:minimum -1.0;
-		lv2:maximum 1.0;
-		lv2:default 0.0;
 	] , [
 	  a lv2:InputPort,
 			lv2:AudioPort;
 		lv2:index 4 ;
 		lv2:symbol "audio_in_2" ;
 		lv2:name "Audio In 2" ;
-		lv2:minimum -1.0;
-		lv2:maximum 1.0;
-		lv2:default 0.0;
 	] , [
 	  a lv2:InputPort,
 			lv2:AudioPort;
 		lv2:index 5 ;
 		lv2:symbol "audio_in_3" ;
 		lv2:name "Audio In 3" ;
-		lv2:minimum -1.0;
-		lv2:maximum 1.0;
-		lv2:default 0.0;
 	] , [
 	  a lv2:InputPort,
 			lv2:AudioPort;
 		lv2:index 6 ;
 		lv2:symbol "audio_in_4" ;
 		lv2:name "Audio In 4" ;
-		lv2:minimum -1.0;
-		lv2:maximum 1.0;
-		lv2:default 0.0;
 	] , [
 	  a lv2:InputPort,
 			lv2:AudioPort;
 		lv2:index 7 ;
 		lv2:symbol "audio_in_5" ;
 		lv2:name "Audio In 5" ;
-		lv2:minimum -1.0;
-		lv2:maximum 1.0;
-		lv2:default 0.0;
 	] , [
 	  a lv2:InputPort,
 			lv2:AudioPort;
 		lv2:index 8 ;
 		lv2:symbol "audio_in_6" ;
 		lv2:name "Audio In 6" ;
-		lv2:minimum -1.0;
-		lv2:maximum 1.0;
-		lv2:default 0.0;
 	] , [
 	  a lv2:InputPort,
 			lv2:AudioPort;
 		lv2:index 9 ;
 		lv2:symbol "audio_in_7" ;
 		lv2:name "Audio In 7" ;
-		lv2:minimum -1.0;
-		lv2:maximum 1.0;
-		lv2:default 0.0;
 	] , [
 	  a lv2:OutputPort,
 			lv2:AudioPort;
 		lv2:index 10 ;
 		lv2:symbol "audio_out_0" ;
 		lv2:name "Audio Out 0" ;
-		lv2:minimum -1.0;
-		lv2:maximum 1.0;
 	] , [
 	  a lv2:OutputPort,
 			lv2:AudioPort;
 		lv2:index 11 ;
 		lv2:symbol "audio_out_1" ;
 		lv2:name "Audio Out 1" ;
-		lv2:minimum -1.0;
-		lv2:maximum 1.0;
 	] , [
 	  a lv2:OutputPort,
 			lv2:AudioPort;
 		lv2:index 12 ;
 		lv2:symbol "audio_out_2" ;
 		lv2:name "Audio Out 2" ;
-		lv2:minimum -1.0;
-		lv2:maximum 1.0;
 	] , [
 	  a lv2:OutputPort,
 			lv2:AudioPort;
 		lv2:index 13 ;
 		lv2:symbol "audio_out_3" ;
 		lv2:name "Audio Out 3" ;
-		lv2:minimum -1.0;
-		lv2:maximum 1.0;
 	] , [
 	  a lv2:OutputPort,
 			lv2:AudioPort;
 		lv2:index 14 ;
 		lv2:symbol "audio_out_4" ;
 		lv2:name "Audio Out 4" ;
-		lv2:minimum -1.0;
-		lv2:maximum 1.0;
 	] , [
 	  a lv2:OutputPort,
 			lv2:AudioPort;
 		lv2:index 15 ;
 		lv2:symbol "audio_out_5" ;
 		lv2:name "Audio Out 5" ;
-		lv2:minimum -1.0;
-		lv2:maximum 1.0;
 	] , [
 	  a lv2:OutputPort,
 			lv2:AudioPort;
 		lv2:index 16 ;
 		lv2:symbol "audio_out_6" ;
 		lv2:name "Audio Out 6" ;
-		lv2:minimum -1.0;
-		lv2:maximum 1.0;
 	] , [
 	  a lv2:OutputPort,
 			lv2:AudioPort;
 		lv2:index 17 ;
 		lv2:symbol "audio_out_7" ;
 		lv2:name "Audio Out 7" ;
-		lv2:minimum -1.0;
-		lv2:maximum 1.0;
 	] ;
 
 	#patch:writable
