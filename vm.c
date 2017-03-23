@@ -308,7 +308,7 @@ run_internal(plughandle_t *handle, uint32_t frames, bool notify,
 		_stack_clear(&handle->stack);
 
 		for(unsigned i = 0; i < ITEMS_MAX; i++)
-		{
+loop: {
 			vm_command_t *cmd = &handle->cmds[i];
 			bool terminate = false;
 
@@ -319,7 +319,7 @@ run_internal(plughandle_t *handle, uint32_t frames, bool notify,
 					const num_t c = cmd->i32;
 					_stack_push(&handle->stack, c);
 				} break;
-				case COMMAND_INT:	
+				case COMMAND_INT:
 				{
 					const num_t c = cmd->i32;
 					_stack_push(&handle->stack, c);
@@ -375,13 +375,17 @@ run_internal(plughandle_t *handle, uint32_t frames, bool notify,
 							if(a)
 								terminate = true;
 						} break;
-						/* dangerous
 						case OP_GOTO:
 						{
-							const int idx = _stack_pop(&handle->stack);
-							i = (idx - 1) & ITEMS_MASK;
+							num_t ab [2];
+							_stack_pop_num(&handle->stack, ab, 2);
+							if(ab[0])
+							{
+								const int idx = ab[1];
+								i = idx & ITEMS_MASK;
+								goto loop;
+							}
 						} break;
-						*/
 
 						case OP_RAND:
 						{

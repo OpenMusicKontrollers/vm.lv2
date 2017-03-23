@@ -72,8 +72,8 @@ vm:opLoad
 	a rdfs:Datatype .
 vm:opBreak
 	a rdfs:Datatype .
-#vm:opGoto
-#	a rdfs:Datatype .
+vm:opGoto
+	a rdfs:Datatype .
 
 vm:opRand
 	a rdfs:Datatype .
@@ -993,6 +993,67 @@ vm:add
 			rdf:value (
 				0 vm:opInput
 				1 vm:opInput
+				vm:opAdd
+			)
+		]
+	] .
+
+vm:sumLoop
+	a pset:Preset ;
+	lv2:appliesTo vm:control ,
+		vm:cv ,
+		vm:atom ,
+		vm:audio ;
+	rdfs:label "Sum in a loop" ;
+	state:state [
+		vm:graph [
+			a atom:Tuple ;
+			rdf:value (
+				# Acc := 0.0
+				# for(Store0 := 7; Store0 >= 0; Store0 := Store0 - 1)
+				#   Acc := Acc + Input(Store0)
+				0.0
+				7
+				0 vm:opStore
+				0 vm:opLoad # goto target
+				vm:opInput
+				vm:opAdd
+				0 vm:opLoad
+				1 vm:opSub
+				0 vm:opStore
+				4
+				0 vm:opLoad
+				0 vm:opGe
+				vm:opGoto
+			)
+		]
+	] .
+
+vm:sumLinear
+	a pset:Preset ;
+	lv2:appliesTo vm:control ,
+		vm:cv ,
+		vm:atom ,
+		vm:audio ;
+	rdfs:label "Sum" ;
+	state:state [
+		vm:graph [
+			a atom:Tuple ;
+			rdf:value (
+				0 vm:opInput
+				1 vm:opInput
+				vm:opAdd
+				2 vm:opInput
+				vm:opAdd
+				3 vm:opInput
+				vm:opAdd
+				4 vm:opInput
+				vm:opAdd
+				5 vm:opInput
+				vm:opAdd
+				6 vm:opInput
+				vm:opAdd
+				7 vm:opInput
 				vm:opAdd
 			)
 		]

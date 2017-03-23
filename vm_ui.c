@@ -649,7 +649,7 @@ instantiate(const LV2UI_Descriptor *descriptor, const char *plugin_uri,
 	if(asprintf(&cfg->font.face, "%sCousine-Regular.ttf", bundle_path) == -1)
 		cfg->font.face = NULL;
 	cfg->font.size = 13;
-	
+
 	*(intptr_t *)widget = nk_pugl_init(&handle->win);
 	nk_pugl_show(&handle->win);
 
@@ -816,7 +816,7 @@ extension_data(const char *uri)
 {
 	if(!strcmp(uri, LV2_UI__idleInterface))
 		return &idle_ext;
-		
+
 	return NULL;
 }
 

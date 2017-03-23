@@ -83,9 +83,7 @@ enum _vm_opcode_enum_t {
 	OP_STORE,
 	OP_LOAD,
 	OP_BREAK,
-	/* dangerous
 	OP_GOTO,
-	*/
 
 	OP_RAND,
 
@@ -275,16 +273,14 @@ static const vm_api_def_t vm_api_def [OP_MAX] = {
 		.npops  = 1,
 		.npushs = 0
 	},
-	/* dangerous
 	[OP_GOTO]  = {
 		.uri    = VM_PREFIX"opGoto",
 		.label  = "Goto given operation",
 		.mnemo  = "goto",
 		.key    = '\0',
-		.npops  = 1,
+		.npops  = 2,
 		.npushs = 0
 	},
-	*/
 
 	[OP_RAND]  = {
 		.uri    = VM_PREFIX"opRand",
