@@ -257,10 +257,10 @@ _draw_plot(struct nk_context *ctx, const float *vals)
 	}
 }
 
-static const int dBFS6_min = -54;
-static const int dBFS6_max = 6;
-static const int dBFS6_rng = dBFS6_max - dBFS6_min;
-static const int dBFS6_div = 2;
+#define dBFS6_min -54
+#define dBFS6_max 6
+#define dBFS6_div 2
+#define dBFS6_rng (dBFS6_max - dBFS6_min)
 
 static const float mx1 = (float)(dBFS6_rng - 2*dBFS6_max) / dBFS6_rng;
 static const float mx2 = (float)(2*dBFS6_max) / dBFS6_rng;
@@ -402,7 +402,26 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 					const float old_val = handle->in0[i];
 					nk_property_float(ctx, input_labels[i], VM_MIN, &handle->in0[i], VM_MAX, stp, fpp);
 					if(old_val != handle->in0[i])
-						handle->writer(handle->controller, i + 2, sizeof(float), 0, &handle->in0[i]);
+					{
+						if(handle->vm_plug == VM_PLUG_ATOM)
+						{
+							const LV2_Atom_Float flt = {
+								.atom = {
+									.size = sizeof(float),
+									.type = handle->forge.Float
+								},
+								.body = handle->in0[i]
+							};
+
+							handle->writer(handle->controller, i + 2,
+								lv2_atom_total_size(&flt.atom), handle->atom_eventTransfer, &flt);
+						}
+						else // CONTROL, CV
+						{
+							handle->writer(handle->controller, i + 2,
+								sizeof(float), 0, &handle->in0[i]);
+						}
+					}
 				}
 				else if(handle->vm_plug == VM_PLUG_AUDIO)
 				{
