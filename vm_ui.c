@@ -440,11 +440,10 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 
 		if(nk_group_begin(ctx, "Program", NK_WINDOW_TITLE | NK_WINDOW_BORDER))
 		{
-			const unsigned nrow2 = 6;
-			const float ratio2 [nrow2] = {
+			const float ratio2 [6] = {
 				0.1, 0.05, 0.05, 0.05, 0.3, 0.45
 			};
-			nk_layout_row(ctx, NK_DYNAMIC, dy, nrow2, ratio2);
+			nk_layout_row(ctx, NK_DYNAMIC, dy, 6, ratio2);
 
 			bool sync = false;
 
@@ -917,10 +916,10 @@ port_event(LV2UI_Handle instance, uint32_t index, uint32_t size,
 					if(idx->body < 10)
 					{
 						const unsigned j = idx->body - 2;
+						handle->in0[j] = val->body;
 
 						if(handle->vm_plug == VM_PLUG_AUDIO)
 						{
-							handle->in0[j] = val->body;
 							if(val->body > handle->in1[j])
 								handle->in1[j] = val->body;
 						}
@@ -928,10 +927,10 @@ port_event(LV2UI_Handle instance, uint32_t index, uint32_t size,
 					else
 					{
 						const unsigned j = idx->body - 10;
+						handle->out0[j] = val->body;
 
 						if(handle->vm_plug == VM_PLUG_AUDIO)
 						{
-							handle->out0[j] = val->body;
 							if(val->body > handle->out1[j])
 								handle->out1[j] = val->body;
 						}

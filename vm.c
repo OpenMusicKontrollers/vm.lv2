@@ -840,7 +840,7 @@ loop: {
 	{
 		const float out1 = (handle->vm_plug == VM_PLUG_AUDIO)
 			? handle->out0[i] // don't clip audio
-			:CLIP(VM_MIN, handle->out0[i], VM_MAX);
+			: CLIP(VM_MIN, handle->out0[i], VM_MAX);
 
 		if(*out[i] != out1)
 		{
