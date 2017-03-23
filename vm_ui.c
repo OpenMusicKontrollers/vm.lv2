@@ -94,15 +94,26 @@ struct _plughandle_t {
 };
 
 static const char *input_labels [CTRL_MAX] = {
-	"Input 0:",
-	"Input 1:",
-	"Input 2:",
-	"Input 3:",
-	"Input 4:",
-	"Input 5:",
-	"Input 6:",
-	"Input 7:",
+	"In 0:",
+	"In 1:",
+	"In 2:",
+	"In 3:",
+	"In 4:",
+	"In 5:",
+	"In 6:",
+	"In 7:",
 };
+
+static const struct nk_color plot_bg_color = {
+	.r = 0x22, .g = 0x22, .b = 0x22, .a = 0xff
+};
+
+static const struct nk_color plot_fg_color = {
+	.r = 0xbb, .g = 0x66, .b = 0x00, .a = 0xff
+};
+
+static const char *ms_label = "#ms:";
+static const char *nil_label = "#";
 
 static void
 _intercept_graph(void *data, LV2_Atom_Forge *forge, int64_t frames,
@@ -194,14 +205,6 @@ _set_property(plughandle_t *handle, LV2_URID property)
 	handle->writer(handle->controller, 0, lv2_atom_total_size(atom),
 		handle->atom_eventTransfer, atom);
 }
-
-static const struct nk_color plot_bg_color = {
-	.r = 0x22, .g = 0x22, .b = 0x22, .a = 0xff
-};
-
-static const struct nk_color plot_fg_color = {
-	.r = 0xbb, .g = 0x66, .b = 0x00, .a = 0xff
-};
 
 static inline void
 _draw_plot(struct nk_context *ctx, const float *vals)
@@ -300,7 +303,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 					handle->writer(handle->controller, i + 2, sizeof(float), 0, &handle->in0[i]);
 
 				const int old_window = handle->inp[i].window;
-				nk_property_int(ctx, "#ms", 10, &handle->inp[i].window, 100000, 1, 1.f);
+				nk_property_int(ctx, ms_label, 10, &handle->inp[i].window, 100000, 1, 1.f);
 				if(old_window != handle->inp[i].window)
 					memset(handle->inp[i].vals, 0x0, sizeof(float)*PLOT_MAX);
 			}
@@ -310,7 +313,12 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 
 		if(nk_group_begin(ctx, "Program", NK_WINDOW_TITLE | NK_WINDOW_BORDER))
 		{
-			nk_layout_row_dynamic(ctx, dy, 2);
+			const unsigned nrow2 = 6;
+			const float ratio2 [nrow2] = {
+				0.1, 0.05, 0.05, 0.05, 0.3, 0.45
+			};
+			nk_layout_row(ctx, NK_DYNAMIC, dy, nrow2, ratio2);
+
 			bool sync = false;
 
 			const float stp = scl * VM_STP;
@@ -320,6 +328,33 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 			{
 				vm_command_t *cmd = &handle->cmds[i];
 				bool terminate = false;
+
+				nk_labelf(ctx, NK_TEXT_CENTERED, "%03u", i);
+				if(cmd->type == COMMAND_NOP)
+				{
+					nk_spacing(ctx, 3);
+				}
+				else
+				{
+					if(nk_button_label(ctx, "+"))
+					{
+						//FIXME insert line
+					}
+
+					if(nk_button_label(ctx, "-"))
+					{
+						//FIXME remove line
+					}
+
+					if(i == 0)
+					{
+						nk_spacing(ctx, 1);
+					}
+					else if(nk_button_label(ctx, "^"))
+					{
+						//FIXME swap line
+					}
+				}
 
 				const vm_command_enum_t old_cmd_type = cmd->type;
 				int cmd_type = old_cmd_type;
@@ -347,7 +382,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 					case COMMAND_INT:
 					{
 						int i32 = cmd->i32;
-						nk_property_int(ctx, "#", INT32_MIN, &i32, INT32_MAX, 1, 1.f);
+						nk_property_int(ctx, nil_label, INT32_MIN, &i32, INT32_MAX, 1, 1.f);
 						if(i32 != cmd->i32)
 						{
 							cmd->i32 = i32;
@@ -357,7 +392,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 					case COMMAND_FLOAT:
 					{
 						float f32 = cmd->f32;
-						nk_property_float(ctx, "#", -HUGE, &f32, HUGE, stp, fpp);
+						nk_property_float(ctx, nil_label, -HUGE, &f32, HUGE, stp, fpp);
 						if(f32 != cmd->f32)
 						{
 							cmd->f32 = f32;
@@ -390,6 +425,8 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 					case COMMAND_NOP:
 					{
 						struct nk_keyboard *keybd = &ctx->input.keyboard;
+
+						nk_spacing(ctx, 1);
 
 						if(keybd->text_len == 1)
 						{
@@ -485,10 +522,10 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 				_draw_plot(ctx, handle->outp[i].vals);
 
 				nk_layout_row_dynamic(ctx, dy, 2);
-				nk_labelf(ctx, NK_TEXT_LEFT, "Output %u: %+f", i, handle->out0[i]);
+				nk_labelf(ctx, NK_TEXT_LEFT, "Out %u: %+f", i, handle->out0[i]);
 
 				const int old_window = handle->outp[i].window;
-				nk_property_int(ctx, "#ms", 10, &handle->outp[i].window, 100000, 1, 1.f);
+				nk_property_int(ctx, ms_label, 10, &handle->outp[i].window, 100000, 1, 1.f);
 				if(old_window != handle->outp[i].window)
 					memset(handle->outp[i].vals, 0x0, sizeof(float)*PLOT_MAX);
 			}
