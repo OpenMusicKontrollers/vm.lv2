@@ -804,7 +804,7 @@ run_internal(plughandle_t *handle, uint32_t frames, bool notify,
 
 						case OP_NOP:
 						{
-							terminate = true;
+							// no operation
 						} break;
 						case OP_MAX:
 							break;

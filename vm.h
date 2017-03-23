@@ -945,9 +945,7 @@ vm_deserialize(vm_api_impl_t *impl, LV2_Atom_Forge *forge,
 			break;
 		}
 
-		cmd += 1;
-
-		if(cmd >= cmds + ITEMS_MAX)
+		if(++cmd >= cmds + ITEMS_MAX)
 			break;
 	}
 
