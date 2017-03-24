@@ -34,6 +34,7 @@ typedef union _vm_port_t vm_port_t;
 typedef union _vm_const_port_t vm_const_port_t;
 typedef struct _vm_stack_t vm_stack_t;
 typedef struct _plughandle_t plughandle_t;
+typedef struct _forge_t forge_t;
 
 typedef double num_t;
 
@@ -70,8 +71,12 @@ struct _plughandle_t {
 	vm_const_port_t in [CTRL_MAX];
 	vm_port_t out [CTRL_MAX];
 
-	num_t in0 [CTRL_MAX];
+	float in0 [CTRL_MAX];
 	num_t out0 [CTRL_MAX];
+	float inm [CTRL_MAX];
+	float outm [CTRL_MAX];
+	bool inf [CTRL_MAX];
+	bool outf [CTRL_MAX];
 
 	PROPS_T(props, MAX_NPROPS);
 	plugstate_t state;
@@ -90,6 +95,12 @@ struct _plughandle_t {
 	vm_command_t cmds [ITEMS_MAX];
 
 	timely_t timely;
+};
+
+struct _forge_t {
+	LV2_Atom_Forge forge;
+	LV2_Atom_Forge_Frame frame;
+	LV2_Atom_Forge_Ref ref;
 };
 
 static inline void
@@ -268,8 +279,59 @@ connect_port(LV2_Handle instance, uint32_t port, void *data)
 #define CLIP(a, v, b) fmin(fmax(a, v), b)
 
 static void
-run_internal(plughandle_t *handle, uint32_t frames, bool notify,
-	const float *in [CTRL_MAX], float *out [CTRL_MAX])
+run_pre(plughandle_t *handle)
+{
+	// reset maximum values and notification flags
+	for(unsigned i = 0; i < CTRL_MAX; i++)
+	{
+		handle->inm[i] = 0.f;
+		handle->inf[i] = false;
+
+		handle->outm[i] = 0.f;
+		handle->outf[i] = false;
+	}
+}
+
+static void
+run_post(plughandle_t *handle, uint32_t frames)
+{
+	for(unsigned i = 0; i < CTRL_MAX; i++)
+	{
+		if(handle->inf[i]) // port needs notification
+		{
+			LV2_Atom_Forge_Frame tup_frame;
+			if(handle->ref)
+				handle->ref = lv2_atom_forge_frame_time(&handle->forge, frames);
+			if(handle->ref)
+				handle->ref = lv2_atom_forge_tuple(&handle->forge, &tup_frame);
+			if(handle->ref)
+				handle->ref = lv2_atom_forge_int(&handle->forge, i + 2);
+			if(handle->ref)
+				handle->ref = lv2_atom_forge_float(&handle->forge, handle->inm[i]);
+			if(handle->ref)
+				lv2_atom_forge_pop(&handle->forge, &tup_frame);
+		}
+
+		if(handle->outf[i]) // port needs notification
+		{
+			LV2_Atom_Forge_Frame tup_frame;
+			if(handle->ref)
+				handle->ref = lv2_atom_forge_frame_time(&handle->forge, frames);
+			if(handle->ref)
+				handle->ref = lv2_atom_forge_tuple(&handle->forge, &tup_frame);
+			if(handle->ref)
+				handle->ref = lv2_atom_forge_int(&handle->forge, i + 10);
+			if(handle->ref)
+				handle->ref = lv2_atom_forge_float(&handle->forge, handle->outm[i]);
+			if(handle->ref)
+				lv2_atom_forge_pop(&handle->forge, &tup_frame);
+		}
+	}
+}
+
+static void
+run_internal(plughandle_t *handle, uint32_t frames,
+	const float *in [CTRL_MAX], float *out [CTRL_MAX], forge_t forgs [CTRL_MAX])
 {
 	for(unsigned i = 0; i < CTRL_MAX; i++)
 	{
@@ -282,19 +344,10 @@ run_internal(plughandle_t *handle, uint32_t frames, bool notify,
 			handle->needs_recalc = true;
 			handle->in0[i] = in1;
 
-			if(notify) //FIXME better report e.g. maximum
+			if(fabsf(in1) > fabsf(handle->inm[i]))
 			{
-				LV2_Atom_Forge_Frame tup_frame;
-				if(handle->ref)
-					handle->ref = lv2_atom_forge_frame_time(&handle->forge, frames);
-				if(handle->ref)
-					handle->ref = lv2_atom_forge_tuple(&handle->forge, &tup_frame);
-				if(handle->ref)
-					handle->ref = lv2_atom_forge_int(&handle->forge, i + 2);
-				if(handle->ref)
-					handle->ref = lv2_atom_forge_float(&handle->forge, in1);
-				if(handle->ref)
-					lv2_atom_forge_pop(&handle->forge, &tup_frame);
+				handle->inm[i] = in1;
+				handle->inf[i] = true; // notify in run_post
 			}
 		}
 	}
@@ -839,19 +892,19 @@ loop: {
 		{
 			*out[i] = out1;
 
-			if(notify) //FIXME better report e.g. maximum
+			if(forgs && (handle->vm_plug == VM_PLUG_ATOM) )
 			{
-				LV2_Atom_Forge_Frame tup_frame;
+				// send changes on atom output ports
+				if(forgs[i].ref)
+					forgs[i].ref = lv2_atom_forge_frame_time(&forgs[i].forge, frames);
 				if(handle->ref)
-					handle->ref = lv2_atom_forge_frame_time(&handle->forge, frames);
-				if(handle->ref)
-					handle->ref = lv2_atom_forge_tuple(&handle->forge, &tup_frame);
-				if(handle->ref)
-					handle->ref = lv2_atom_forge_int(&handle->forge, i + 10);
-				if(handle->ref)
-					handle->ref = lv2_atom_forge_float(&handle->forge, out1);
-				if(handle->ref)
-					lv2_atom_forge_pop(&handle->forge, &tup_frame);
+					forgs[i].ref = lv2_atom_forge_float(&forgs[i].forge, out1);
+			}
+
+			if(fabsf(out1) > fabsf(handle->outm[i]))
+			{
+				handle->outm[i] = out1;
+				handle->outf[i] = true; // notify out run_post
 			}
 		}
 	}
@@ -866,6 +919,8 @@ run_control(LV2_Handle instance, uint32_t nsamples)
 	LV2_Atom_Forge_Frame frame;
 	lv2_atom_forge_set_buffer(&handle->forge, (uint8_t *)handle->notify, capacity);
 	handle->ref = lv2_atom_forge_sequence_head(&handle->forge, &frame, 0);
+
+	run_pre(handle);
 
 	int64_t last_t = 0;
 	LV2_ATOM_SEQUENCE_FOREACH(handle->control, ev)
@@ -910,9 +965,10 @@ run_control(LV2_Handle instance, uint32_t nsamples)
 			handle->out[7].flt
 		};
 
-		const bool notify = true;
-		run_internal(handle, nsamples -1, notify, in, out);
+		run_internal(handle, nsamples -1, in, out, NULL);
 	}
+
+	run_post(handle, nsamples - 1);
 
 	if(handle->ref)
 		handle->ref = lv2_atom_forge_frame_time(&handle->forge, nsamples - 1);
@@ -922,12 +978,7 @@ run_control(LV2_Handle instance, uint32_t nsamples)
 	if(handle->ref)
 		lv2_atom_forge_pop(&handle->forge, &frame);
 	else
-	{
 		lv2_atom_sequence_clear(handle->notify);
-
-		if(handle->log)
-			lv2_log_trace(&handle->logger, "notify sequence overflowed\n");
-	}
 
 	handle->off += nsamples;
 }
@@ -969,8 +1020,7 @@ run_cv_audio_advance(plughandle_t *handle, const LV2_Atom_Object *obj,
 				&handle->out[7].flt[i]
 			};
 
-			const bool notify = (i == 0); // FIXME
-			run_internal(handle, i, notify, in, out);
+			run_internal(handle, i, in, out, NULL);
 		}
 	}
 }
@@ -984,6 +1034,8 @@ run_cv_audio(LV2_Handle instance, uint32_t nsamples)
 	LV2_Atom_Forge_Frame frame;
 	lv2_atom_forge_set_buffer(&handle->forge, (uint8_t *)handle->notify, capacity);
 	handle->ref = lv2_atom_forge_sequence_head(&handle->forge, &frame, 0);
+
+	run_pre(handle);
 
 	int64_t last_t = 0;
 	LV2_ATOM_SEQUENCE_FOREACH(handle->control, ev)
@@ -1004,6 +1056,8 @@ run_cv_audio(LV2_Handle instance, uint32_t nsamples)
 		handle->needs_sync = false;
 	}
 
+	run_post(handle, nsamples - 1);
+
 	if(handle->ref)
 		handle->ref = lv2_atom_forge_frame_time(&handle->forge, nsamples - 1);
 	if(handle->ref)
@@ -1018,6 +1072,27 @@ run_cv_audio(LV2_Handle instance, uint32_t nsamples)
 }
 
 static void
+run_atom_advance(plughandle_t *handle, const LV2_Atom_Object *obj,
+	uint32_t from, uint32_t to, const float *in [CTRL_MAX], float *out [CTRL_MAX],
+	forge_t forgs [CTRL_MAX])
+{
+	if(from == to) // just run timely_advance for void range
+	{
+		timely_advance(&handle->timely, obj, from, to);
+	}
+	else
+	{
+		for(unsigned i = from; i < to; i++)
+		{
+			if(timely_advance(&handle->timely, obj, i, i + 1))
+				obj = NULL; // invalidate obj for further steps if handled
+
+			run_internal(handle, i, in, out, forgs);
+		}
+	}
+}
+
+static void
 run_atom(LV2_Handle instance, uint32_t nsamples)
 {
 	plughandle_t *handle = instance;
@@ -1027,30 +1102,18 @@ run_atom(LV2_Handle instance, uint32_t nsamples)
 	lv2_atom_forge_set_buffer(&handle->forge, (uint8_t *)handle->notify, capacity);
 	handle->ref = lv2_atom_forge_sequence_head(&handle->forge, &frame, 0);
 
-	int64_t last_t = 0;
-	LV2_ATOM_SEQUENCE_FOREACH(handle->control, ev)
-	{
-		const LV2_Atom *atom= &ev->body;
-		const LV2_Atom_Object *obj = (const LV2_Atom_Object *)&ev->body;
+	run_pre(handle);
 
-		props_advance(&handle->props, &handle->forge, ev->time.frames, obj, &handle->ref);
-		timely_advance(&handle->timely, obj, last_t, ev->time.frames);
-
-		last_t = ev->time.frames;
-	}
-	timely_advance(&handle->timely, NULL, last_t, nsamples);
-
-	if(handle->needs_sync)
-	{
-		props_set(&handle->props, &handle->forge, nsamples - 1, handle->vm_graph, &handle->ref);
-		handle->needs_sync = false;
-	}
-
+	forge_t forgs [CTRL_MAX]; //FIXME make part of plughandle_t
 	float pin [CTRL_MAX];
 	float pout [CTRL_MAX];
 
 	for(unsigned i = 0; i < CTRL_MAX; i++)
 	{
+		memcpy(&forgs[i].forge, &handle->forge, sizeof(LV2_Atom_Forge)); //FIXME do at instantiation time
+		lv2_atom_forge_set_buffer(&forgs[i].forge, (uint8_t *)handle->out[i].seq, handle->out[i].seq->atom.size);
+		forgs[i].ref = lv2_atom_forge_sequence_head(&forgs[i].forge, &forgs[i].frame, 0);
+
 		pin[i] = handle->in0[i];
 		pout[i] = handle->out0[i];
 	}
@@ -1077,26 +1140,78 @@ run_atom(LV2_Handle instance, uint32_t nsamples)
 		&pout[7]
 	};
 
-	//FIXME needs to be muxed with control
-	for(unsigned i = 0; i < CTRL_MAX; i++)
+	const unsigned nseqs = CTRL_MAX + 1;
+	const LV2_Atom_Sequence *seqs [nseqs];
+	const LV2_Atom_Event *evs [nseqs];
+
+	for(unsigned i = 0; i < nseqs; i++)
 	{
-		LV2_ATOM_SEQUENCE_FOREACH(handle->in[i].seq, ev)
+		seqs[i] = (i == 0)
+			? handle->control
+			: handle->in[i-1].seq;
+
+		evs[i] = lv2_atom_sequence_begin(&seqs[i]->body);
+	}
+
+	int64_t last_t = 0;
+	while(true)
+	{
+		int nxt = -1;
+		int64_t frames = nsamples;
+
+		// search next event
+		for(unsigned i = 0; i < nseqs; i++)
 		{
-			const LV2_Atom_Float *f32 = (const LV2_Atom_Float *)&ev->body;
-
-			//printf("got atom:Float: %u %f\n", i, f32->body);
-
-			if(f32->atom.type == handle->forge.Float)
+			if(!evs[i] || lv2_atom_sequence_is_end(&seqs[i]->body, seqs[i]->atom.size, evs[i]))
 			{
-				pin[i] = f32->body;
+				evs[i] = NULL; // invalidate, sequence has been drained
+				continue;
+			}
 
-				const bool notify = true; //FIXME
-				run_internal(handle, nsamples - 1, notify, in, out); //FIXME use ev.time.frames
-
-				//FIXME send floats to output sequences
+			if(evs[i]->time.frames < frames)
+			{
+				frames = evs[i]->time.frames;
+				nxt = i;
 			}
 		}
+
+		if(nxt == -1)
+			break; // no events anymore, exit loop
+
+		// handle event
+		{
+			const bool is_control = (nxt == 0); // is event from control port?
+			const LV2_Atom_Event *ev = evs[nxt];
+			const LV2_Atom *atom= &ev->body;
+			const LV2_Atom_Object *obj = (const LV2_Atom_Object *)&ev->body;
+			const LV2_Atom_Float *f32 = (const LV2_Atom_Float *)&ev->body;
+
+			if(is_control)
+			{
+				props_advance(&handle->props, &handle->forge, ev->time.frames, obj, &handle->ref);
+			}
+			else if(f32->atom.type == handle->forge.Float)
+			{
+				pin[nxt-1] = f32->body;
+			}
+
+			run_atom_advance(handle, is_control ? obj : NULL, last_t, ev->time.frames, in, out, forgs);
+
+			last_t = ev->time.frames;
+		}
+
+		// advance event iterator on active sequence
+		evs[nxt] = lv2_atom_sequence_next(evs[nxt]);
 	}
+	run_atom_advance(handle, NULL, last_t, nsamples, in, out, forgs);
+
+	if(handle->needs_sync)
+	{
+		props_set(&handle->props, &handle->forge, nsamples - 1, handle->vm_graph, &handle->ref);
+		handle->needs_sync = false;
+	}
+
+	run_post(handle, nsamples - 1);
 
 	if(handle->ref)
 		handle->ref = lv2_atom_forge_frame_time(&handle->forge, nsamples - 1);
@@ -1107,6 +1222,14 @@ run_atom(LV2_Handle instance, uint32_t nsamples)
 		lv2_atom_forge_pop(&handle->forge, &frame);
 	else
 		lv2_atom_sequence_clear(handle->notify);
+
+	for(unsigned i = 0; i < CTRL_MAX; i++)
+	{
+		if(forgs[i].ref)
+			lv2_atom_forge_pop(&forgs[i].forge, &forgs[i].frame);
+		else
+			lv2_atom_sequence_clear(handle->out[i].seq);
+	}
 
 	handle->off += nsamples;
 }
