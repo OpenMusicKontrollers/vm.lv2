@@ -341,9 +341,6 @@ timely_advance_body(timely_t *timely, uint32_t size, uint32_t type,
 					timely->cb(timely, i, timely->urid.time_barBeat, timely->data);
 			}
 
-			if( (timely->mask & TIMELY_MASK_FRAME) && (update_frame != i) )
-				timely->cb(timely, (update_frame = i), timely->urid.time_frame, timely->data);
-
 			timely->offset.bar += 1;
 			timely->offset.beat += 1;
 			timely->pos.frame += 1;
