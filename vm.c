@@ -20,6 +20,8 @@
 #include <math.h>
 #include <inttypes.h>
 
+#include <timely.lv2/timely.h>
+
 #include <vm.h>
 
 #define SLOT_MAX  0x20
@@ -170,9 +172,7 @@ static void
 _cb(timely_t *timely, int64_t frames, LV2_URID type, void *data)
 {
 	plughandle_t *handle = data;
-
-	if(handle->status & VM_STATUS_HAS_TIME)
-		handle->needs_recalc = true;
+	(void)handle;
 }
 
 static LV2_Handle
@@ -208,17 +208,7 @@ instantiate(const LV2_Descriptor* descriptor, num_t rate,
 
 	lv2_atom_forge_init(&handle->forge, handle->map);
 	vm_api_init(handle->api, handle->map);
-	const timely_mask_t mask = TIMELY_MASK_BAR_BEAT
-		| TIMELY_MASK_BAR
-		| TIMELY_MASK_BEAT_UNIT
-		| TIMELY_MASK_BEATS_PER_BAR
-		| TIMELY_MASK_BEATS_PER_MINUTE
-		| TIMELY_MASK_FRAME
-		| TIMELY_MASK_FRAMES_PER_SECOND
-		| TIMELY_MASK_SPEED
-		| TIMELY_MASK_BAR_BEAT_WHOLE
-		| TIMELY_MASK_BAR_WHOLE;
-	timely_init(&handle->timely, handle->map, rate, mask, _cb, handle);
+	timely_init(&handle->timely, handle->map, rate, 0, _cb, handle);
 
 	if(!props_init(&handle->props, MAX_NPROPS, descriptor->URI, handle->map, handle))
 	{
@@ -309,7 +299,10 @@ run_internal(plughandle_t *handle, uint32_t frames, bool notify,
 		}
 	}
 
-	if(handle->needs_recalc || (handle->status & VM_STATUS_HAS_RAND) )
+	if(handle->status != VM_STATUS_STATIC)
+		handle->needs_recalc = true;
+
+	if(handle->needs_recalc)
 	{
 		_stack_clear(&handle->stack);
 
@@ -880,8 +873,8 @@ run_control(LV2_Handle instance, uint32_t nsamples)
 		const LV2_Atom *atom= &ev->body;
 		const LV2_Atom_Object *obj = (const LV2_Atom_Object *)&ev->body;
 
-		if(!timely_advance(&handle->timely, obj, last_t, ev->time.frames))
-			props_advance(&handle->props, &handle->forge, ev->time.frames, obj, &handle->ref);
+		props_advance(&handle->props, &handle->forge, ev->time.frames, obj, &handle->ref);
+		timely_advance(&handle->timely, obj, last_t, ev->time.frames);
 
 		last_t = ev->time.frames;
 	}
@@ -893,6 +886,7 @@ run_control(LV2_Handle instance, uint32_t nsamples)
 		handle->needs_sync = false;
 	}
 
+	// run once at end of period for controls
 	{
 		const float *in [CTRL_MAX ] = {
 			handle->in[0].flt,
@@ -928,9 +922,57 @@ run_control(LV2_Handle instance, uint32_t nsamples)
 	if(handle->ref)
 		lv2_atom_forge_pop(&handle->forge, &frame);
 	else
+	{
 		lv2_atom_sequence_clear(handle->notify);
 
+		if(handle->log)
+			lv2_log_trace(&handle->logger, "notify sequence overflowed\n");
+	}
+
 	handle->off += nsamples;
+}
+
+static void
+run_cv_audio_advance(plughandle_t *handle, const LV2_Atom_Object *obj,
+	uint32_t from, uint32_t to)
+{
+	if(from == to) // just run timely_advance for void range
+	{
+		timely_advance(&handle->timely, obj, from, to);
+	}
+	else
+	{
+		for(unsigned i = from; i < to; i++)
+		{
+			if(timely_advance(&handle->timely, obj, i, i + 1))
+				obj = NULL; // invalidate obj for further steps if handled
+
+			const float *in [CTRL_MAX ] = {
+				&handle->in[0].flt[i],
+				&handle->in[1].flt[i],
+				&handle->in[2].flt[i],
+				&handle->in[3].flt[i],
+				&handle->in[4].flt[i],
+				&handle->in[5].flt[i],
+				&handle->in[6].flt[i],
+				&handle->in[7].flt[i]
+			};
+
+			float *out [CTRL_MAX ] = {
+				&handle->out[0].flt[i],
+				&handle->out[1].flt[i],
+				&handle->out[2].flt[i],
+				&handle->out[3].flt[i],
+				&handle->out[4].flt[i],
+				&handle->out[5].flt[i],
+				&handle->out[6].flt[i],
+				&handle->out[7].flt[i]
+			};
+
+			const bool notify = (i == 0); // FIXME
+			run_internal(handle, i, notify, in, out);
+		}
+	}
 }
 
 static void
@@ -949,46 +991,17 @@ run_cv_audio(LV2_Handle instance, uint32_t nsamples)
 		const LV2_Atom *atom= &ev->body;
 		const LV2_Atom_Object *obj = (const LV2_Atom_Object *)&ev->body;
 
-		if(!timely_advance(&handle->timely, obj, last_t, ev->time.frames))
-			props_advance(&handle->props, &handle->forge, ev->time.frames, obj, &handle->ref);
+		props_advance(&handle->props, &handle->forge, ev->time.frames, obj, &handle->ref);
+		run_cv_audio_advance(handle, obj, last_t, ev->time.frames);
 
 		last_t = ev->time.frames;
 	}
-	timely_advance(&handle->timely, NULL, last_t, nsamples);
+	run_cv_audio_advance(handle, NULL, last_t, nsamples);
 
 	if(handle->needs_sync)
 	{
 		props_set(&handle->props, &handle->forge, nsamples - 1, handle->vm_graph, &handle->ref);
 		handle->needs_sync = false;
-	}
-
-	//FIXME needs to be muxed with control
-	for(unsigned i = 0; i < nsamples; i++)
-	{
-		const float *in [CTRL_MAX ] = {
-			&handle->in[0].flt[i],
-			&handle->in[1].flt[i],
-			&handle->in[2].flt[i],
-			&handle->in[3].flt[i],
-			&handle->in[4].flt[i],
-			&handle->in[5].flt[i],
-			&handle->in[6].flt[i],
-			&handle->in[7].flt[i]
-		};
-
-		float *out [CTRL_MAX ] = {
-			&handle->out[0].flt[i],
-			&handle->out[1].flt[i],
-			&handle->out[2].flt[i],
-			&handle->out[3].flt[i],
-			&handle->out[4].flt[i],
-			&handle->out[5].flt[i],
-			&handle->out[6].flt[i],
-			&handle->out[7].flt[i]
-		};
-
-		const bool notify = (i == 0);
-		run_internal(handle, nsamples - 1, notify, in, out);
 	}
 
 	if(handle->ref)
@@ -1020,8 +1033,8 @@ run_atom(LV2_Handle instance, uint32_t nsamples)
 		const LV2_Atom *atom= &ev->body;
 		const LV2_Atom_Object *obj = (const LV2_Atom_Object *)&ev->body;
 
-		if(!timely_advance(&handle->timely, obj, last_t, ev->time.frames))
-			props_advance(&handle->props, &handle->forge, ev->time.frames, obj, &handle->ref);
+		props_advance(&handle->props, &handle->forge, ev->time.frames, obj, &handle->ref);
+		timely_advance(&handle->timely, obj, last_t, ev->time.frames);
 
 		last_t = ev->time.frames;
 	}

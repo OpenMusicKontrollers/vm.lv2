@@ -32,8 +32,6 @@
 #include "lv2/lv2plug.in/ns/extensions/ui/ui.h"
 #include "lv2/lv2plug.in/ns/lv2core/lv2.h"
 
-#include <timely.lv2/timely.h>
-
 #define VM_URI                "http://open-music-kontrollers.ch/lv2/vm"
 #define VM_PREFIX             VM_URI"#"
 
