@@ -364,10 +364,9 @@ run_internal(plughandle_t *handle, uint32_t frames,
 			handle->needs_recalc = true;
 			handle->in0[i] = in1;
 
-			const float inm = (in1 + handle->inm[i]) / 2; // moving averager
-			if(inm != handle->inm[i])
+			if(in1 != handle->inm[i])
 			{
-				handle->inm[i] = inm;
+				handle->inm[i] = in1;
 				handle->inf[i] = true; // notify in run_post
 			}
 		}
@@ -922,10 +921,9 @@ loop: {
 					forgs[i].ref = lv2_atom_forge_float(&forgs[i].forge, out1);
 			}
 
-			const float outm = (out1 + handle->outm[i]) / 2; // moving averager
-			if(outm != handle->outm[i])
+			if(out1 != handle->outm[i])
 			{
-				handle->outm[i] = outm;
+				handle->outm[i] = out1;
 				handle->outf[i] = true; // notify out run_post
 			}
 		}
