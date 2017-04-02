@@ -356,6 +356,46 @@ _draw_mixer(struct nk_context *ctx, float peak)
 }
 
 static void
+_wheel_float(struct nk_context *ctx, float *value, float stp)
+{
+	const struct nk_rect bounds = nk_widget_bounds(ctx);
+
+	if(nk_input_is_mouse_hovering_rect(&ctx->input, bounds))
+	{
+		if(ctx->input.mouse.scroll_delta > 0.f)
+		{
+			*value += stp;
+			ctx->input.mouse.scroll_delta = 0.f;
+		}
+		else if(ctx->input.mouse.scroll_delta < 0.f)
+		{
+			*value -= stp;
+			ctx->input.mouse.scroll_delta = 0.f;
+		}
+	}
+}
+
+static void
+_wheel_int(struct nk_context *ctx, int *value)
+{
+	const struct nk_rect bounds = nk_widget_bounds(ctx);
+
+	if(nk_input_is_mouse_hovering_rect(&ctx->input, bounds))
+	{
+		if(ctx->input.mouse.scroll_delta > 0.f)
+		{
+			*value += 1;
+			ctx->input.mouse.scroll_delta = 0.f;
+		}
+		else if(ctx->input.mouse.scroll_delta < 0.f)
+		{
+			*value -= 1;
+			ctx->input.mouse.scroll_delta = 0.f;
+		}
+	}
+}
+
+static void
 _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 {
 	plughandle_t *handle = data;
@@ -405,6 +445,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 						fpp = scl * VM_RNG / nk_widget_width(ctx);
 					}
 					const float old_val = handle->in0[i];
+					_wheel_float(ctx, &handle->in0[i], stp);
 					nk_property_float(ctx, input_labels[i], VM_MIN, &handle->in0[i], VM_MAX, stp, fpp);
 					if(old_val != handle->in0[i])
 					{
@@ -439,6 +480,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 				}
 
 				const int old_window = handle->inp[i].window;
+				_wheel_int(ctx, &handle->inp[i].window);
 				nk_property_int(ctx, ms_label, 10, &handle->inp[i].window, 100000, 1, 1.f);
 				if(old_window != handle->inp[i].window)
 					memset(handle->inp[i].vals, 0x0, sizeof(float)*PLOT_MAX);
@@ -529,6 +571,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 					case COMMAND_INT:
 					{
 						int i32 = cmd->i32;
+						_wheel_int(ctx, &i32);
 						nk_property_int(ctx, nil_label, INT32_MIN, &i32, INT32_MAX, 1, 1.f);
 						if(i32 != cmd->i32)
 						{
@@ -539,6 +582,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 					case COMMAND_FLOAT:
 					{
 						float f32 = cmd->f32;
+						_wheel_float(ctx, &f32, stp);
 						nk_property_float(ctx, nil_label, -HUGE, &f32, HUGE, stp, fpp);
 						if(f32 != cmd->f32)
 						{
@@ -686,6 +730,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 				}
 
 				const int old_window = handle->outp[i].window;
+				_wheel_int(ctx, &handle->outp[i].window);
 				nk_property_int(ctx, ms_label, 10, &handle->outp[i].window, 100000, 1, 1.f);
 				if(old_window != handle->outp[i].window)
 					memset(handle->outp[i].vals, 0x0, sizeof(float)*PLOT_MAX);
