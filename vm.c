@@ -54,6 +54,12 @@ struct _vm_stack_t {
 	int ptr;
 };
 
+struct _forge_t {
+	LV2_Atom_Forge forge;
+	LV2_Atom_Forge_Frame frame;
+	LV2_Atom_Forge_Ref ref;
+};
+
 struct _plughandle_t {
 	LV2_URID_Map *map;
 	LV2_Atom_Forge forge;
@@ -77,6 +83,7 @@ struct _plughandle_t {
 	float outm [CTRL_MAX];
 	bool inf [CTRL_MAX];
 	bool outf [CTRL_MAX];
+	forge_t forgs [CTRL_MAX];
 
 	PROPS_T(props, MAX_NPROPS);
 	plugstate_t state;
@@ -95,12 +102,6 @@ struct _plughandle_t {
 	vm_command_t cmds [ITEMS_MAX];
 
 	timely_t timely;
-};
-
-struct _forge_t {
-	LV2_Atom_Forge forge;
-	LV2_Atom_Forge_Frame frame;
-	LV2_Atom_Forge_Ref ref;
 };
 
 static inline void
@@ -232,8 +233,12 @@ instantiate(const LV2_Descriptor* descriptor, num_t rate,
 	handle->vm_graph = handle->map->map(handle->map->handle, VM__graph);
 
 	lv2_atom_forge_init(&handle->forge, handle->map);
+	for(unsigned i = 0; i < CTRL_MAX; i++)
+		lv2_atom_forge_init(&handle->forgs[i].forge, handle->map);
+
 	vm_api_init(handle->api, handle->map);
 	timely_init(&handle->timely, handle->map, rate, 0, _cb, handle);
+
 
 	if(!props_init(&handle->props, MAX_NPROPS, descriptor->URI, handle->map, handle))
 	{
@@ -1121,13 +1126,12 @@ run_atom(LV2_Handle instance, uint32_t nsamples)
 
 	run_pre(handle);
 
-	forge_t forgs [CTRL_MAX]; //FIXME make part of plughandle_t
+	forge_t *forgs = handle->forgs;
 	float pin [CTRL_MAX];
 	float pout [CTRL_MAX];
 
 	for(unsigned i = 0; i < CTRL_MAX; i++)
 	{
-		memcpy(&forgs[i].forge, &handle->forge, sizeof(LV2_Atom_Forge)); //FIXME do at instantiation time
 		lv2_atom_forge_set_buffer(&forgs[i].forge, (uint8_t *)handle->out[i].seq, handle->out[i].seq->atom.size);
 		forgs[i].ref = lv2_atom_forge_sequence_head(&forgs[i].forge, &forgs[i].frame, 0);
 
