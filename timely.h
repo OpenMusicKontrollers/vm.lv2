@@ -83,11 +83,6 @@ struct _timely_t {
 		double bar;
 	} offset;
 
-	struct {
-		double beat;
-		double bar;
-	} window;
-
 	bool first;
 	timely_mask_t mask;
 	timely_cb_t cb;
@@ -219,11 +214,9 @@ _timely_refresh(timely_t *timely)
 	timely->frames_per_bar = timely->frames_per_beat * timely->pos.beats_per_bar;
 
 	// bar
-	timely->window.bar = timely->frames_per_bar;
 	timely->offset.bar = timely->pos.bar_beat * timely->frames_per_beat;
 
 	// beat
-	timely->window.beat = timely->frames_per_beat;
 	double integral;
 	double beat_beat = modf(timely->pos.bar_beat, &integral);
 	(void)integral;
@@ -319,10 +312,10 @@ timely_advance_body(timely_t *timely, uint32_t size, uint32_t type,
 		unsigned update_frame = to;
 		for(unsigned i=from; i<to; i++)
 		{
-			if(timely->offset.bar >= timely->window.bar)
+			if(timely->offset.bar >= timely->frames_per_bar)
 			{
 				timely->pos.bar += 1;
-				timely->offset.bar -= timely->window.bar;
+				timely->offset.bar -= timely->frames_per_bar;
 
 				if(timely->mask & TIMELY_MASK_FRAME)
 					timely->cb(timely, (update_frame = i), timely->urid.time_frame, timely->data);
@@ -331,10 +324,10 @@ timely_advance_body(timely_t *timely, uint32_t size, uint32_t type,
 					timely->cb(timely, i, timely->urid.time_bar, timely->data);
 			}
 
-			if( (timely->offset.beat >= timely->window.beat) )
+			if( (timely->offset.beat >= timely->frames_per_beat) )
 			{
 				timely->pos.bar_beat = floor(timely->pos.bar_beat) + 1;
-				timely->offset.beat -= timely->window.beat;
+				timely->offset.beat -= timely->frames_per_beat;
 
 				if(timely->pos.bar_beat >= timely->pos.beats_per_bar)
 					timely->pos.bar_beat -= timely->pos.beats_per_bar;
