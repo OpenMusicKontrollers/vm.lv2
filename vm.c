@@ -106,7 +106,8 @@ struct _forge_t {
 static inline void
 _stack_clear(vm_stack_t *stack)
 {
-	memset(stack->slots, 0x0, SLOT_MAX * sizeof(num_t));
+	for(unsigned i = 0; i < SLOT_MAX; i++)
+		stack->slots[i] = 0;
 	stack->ptr = 0;
 }
 
@@ -152,6 +153,17 @@ _stack_peek(vm_stack_t *stack)
 	return stack->slots[stack->ptr];
 }
 
+static inline void
+_dirty(plughandle_t *handle)
+{
+	// sync input and output to UI
+	for(unsigned i = 0; i < CTRL_MAX; i++)
+	{
+		handle->inf[i] = true;
+		handle->outf[i] = true;
+	}
+}
+
 static void
 _intercept_graph(void *data, LV2_Atom_Forge *forge, int64_t frames,
 	props_event_t event, props_impl_t *impl)
@@ -166,6 +178,8 @@ _intercept_graph(void *data, LV2_Atom_Forge *forge, int64_t frames,
 
 	handle->needs_sync = true;
 	handle->needs_recalc = true;
+
+	_dirty(handle);
 }
 
 static const props_def_t defs [MAX_NPROPS] = {
@@ -285,10 +299,7 @@ run_pre(plughandle_t *handle)
 	for(unsigned i = 0; i < CTRL_MAX; i++)
 	{
 		handle->inm[i] = 0.f;
-		handle->inf[i] = false;
-
 		handle->outm[i] = 0.f;
-		handle->outf[i] = false;
 	}
 }
 
@@ -310,6 +321,8 @@ run_post(plughandle_t *handle, uint32_t frames)
 				handle->ref = lv2_atom_forge_float(&handle->forge, handle->inm[i]);
 			if(handle->ref)
 				lv2_atom_forge_pop(&handle->forge, &tup_frame);
+
+			handle->inf[i] = false;
 		}
 
 		if(handle->outf[i]) // port needs notification
@@ -325,6 +338,8 @@ run_post(plughandle_t *handle, uint32_t frames)
 				handle->ref = lv2_atom_forge_float(&handle->forge, handle->outm[i]);
 			if(handle->ref)
 				lv2_atom_forge_pop(&handle->forge, &tup_frame);
+
+			handle->outf[i] = false;
 		}
 	}
 }
@@ -344,9 +359,10 @@ run_internal(plughandle_t *handle, uint32_t frames,
 			handle->needs_recalc = true;
 			handle->in0[i] = in1;
 
-			if(fabsf(in1) > fabsf(handle->inm[i]))
+			const float inm = (in1 + handle->inm[i]) / 2; // moving averager
+			if(inm != handle->inm[i])
 			{
-				handle->inm[i] = in1;
+				handle->inm[i] = inm;
 				handle->inf[i] = true; // notify in run_post
 			}
 		}
@@ -901,9 +917,10 @@ loop: {
 					forgs[i].ref = lv2_atom_forge_float(&forgs[i].forge, out1);
 			}
 
-			if(fabsf(out1) > fabsf(handle->outm[i]))
+			const float outm = (out1 + handle->outm[i]) / 2; // moving averager
+			if(outm != handle->outm[i])
 			{
-				handle->outm[i] = out1;
+				handle->outm[i] = outm;
 				handle->outf[i] = true; // notify out run_post
 			}
 		}
