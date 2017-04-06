@@ -94,7 +94,6 @@ struct _plughandle_t {
 
 	vm_stack_t stack;
 	bool needs_recalc;
-	bool needs_sync;
 	vm_status_t status;
 
 	int64_t off;
@@ -166,8 +165,7 @@ _dirty(plughandle_t *handle)
 }
 
 static void
-_intercept_graph(void *data, LV2_Atom_Forge *forge, int64_t frames,
-	props_event_t event, props_impl_t *impl)
+_intercept_graph(void *data, int64_t frames, props_impl_t *impl)
 {
 	plughandle_t *handle = data;
 
@@ -177,7 +175,6 @@ _intercept_graph(void *data, LV2_Atom_Forge *forge, int64_t frames,
 	handle->status = vm_deserialize(handle->api, &handle->forge, handle->cmds,
 		impl->value.size, impl->value.body);
 
-	handle->needs_sync = true;
 	handle->needs_recalc = true;
 
 	_dirty(handle);
@@ -189,7 +186,6 @@ static const props_def_t defs [MAX_NPROPS] = {
 		.offset = offsetof(plugstate_t, graph),
 		.type = LV2_ATOM__Tuple,
 		.max_size = GRAPH_SIZE,
-		.event_mask = PROP_EVENT_WRITE,
 		.event_cb = _intercept_graph,
 	}
 };
@@ -240,16 +236,11 @@ instantiate(const LV2_Descriptor* descriptor, num_t rate,
 	timely_init(&handle->timely, handle->map, rate, 0, _cb, handle);
 
 
-	if(!props_init(&handle->props, MAX_NPROPS, descriptor->URI, handle->map, handle))
+	if(!props_init(&handle->props, descriptor->URI,
+		defs, MAX_NPROPS,
+		&handle->state, &handle->stash, handle->map, handle))
 	{
 		fprintf(stderr, "props_init failed\n");
-		free(handle);
-		return NULL;
-	}
-
-	if(!props_register(&handle->props, defs, MAX_NPROPS, &handle->state, &handle->stash))
-	{
-		fprintf(stderr, "props_register failed\n");
 		free(handle);
 		return NULL;
 	}
@@ -941,6 +932,7 @@ run_control(LV2_Handle instance, uint32_t nsamples)
 	handle->ref = lv2_atom_forge_sequence_head(&handle->forge, &frame, 0);
 
 	run_pre(handle);
+	props_idle(&handle->props, &handle->forge, 0, &handle->ref);
 
 	int64_t last_t = 0;
 	LV2_ATOM_SEQUENCE_FOREACH(handle->control, ev)
@@ -954,12 +946,6 @@ run_control(LV2_Handle instance, uint32_t nsamples)
 		last_t = ev->time.frames;
 	}
 	timely_advance(&handle->timely, NULL, last_t, nsamples);
-
-	if(handle->needs_sync)
-	{
-		props_set(&handle->props, &handle->forge, nsamples - 1, handle->vm_graph, &handle->ref);
-		handle->needs_sync = false;
-	}
 
 	// run once at end of period for controls
 	{
@@ -1056,6 +1042,7 @@ run_cv_audio(LV2_Handle instance, uint32_t nsamples)
 	handle->ref = lv2_atom_forge_sequence_head(&handle->forge, &frame, 0);
 
 	run_pre(handle);
+	props_idle(&handle->props, &handle->forge, 0, &handle->ref);
 
 	int64_t last_t = 0;
 	LV2_ATOM_SEQUENCE_FOREACH(handle->control, ev)
@@ -1069,12 +1056,6 @@ run_cv_audio(LV2_Handle instance, uint32_t nsamples)
 		last_t = ev->time.frames;
 	}
 	run_cv_audio_advance(handle, NULL, last_t, nsamples);
-
-	if(handle->needs_sync)
-	{
-		props_set(&handle->props, &handle->forge, nsamples - 1, handle->vm_graph, &handle->ref);
-		handle->needs_sync = false;
-	}
 
 	run_post(handle, nsamples - 1);
 
@@ -1123,6 +1104,7 @@ run_atom(LV2_Handle instance, uint32_t nsamples)
 	handle->ref = lv2_atom_forge_sequence_head(&handle->forge, &frame, 0);
 
 	run_pre(handle);
+	props_idle(&handle->props, &handle->forge, 0, &handle->ref);
 
 	forge_t *forgs = handle->forgs;
 	float pin [CTRL_MAX];
@@ -1224,12 +1206,6 @@ run_atom(LV2_Handle instance, uint32_t nsamples)
 	}
 	run_atom_advance(handle, NULL, last_t, nsamples, in, out, forgs);
 
-	if(handle->needs_sync)
-	{
-		props_set(&handle->props, &handle->forge, nsamples - 1, handle->vm_graph, &handle->ref);
-		handle->needs_sync = false;
-	}
-
 	run_post(handle, nsamples - 1);
 
 	if(handle->ref)
@@ -1284,36 +1260,11 @@ static const LV2_State_Interface state_iface = {
 	.restore = _state_restore
 };
 
-static inline LV2_Worker_Status
-_work(LV2_Handle instance, LV2_Worker_Respond_Function respond,
-LV2_Worker_Respond_Handle worker, uint32_t size, const void *body)
-{
-	plughandle_t *handle = instance;
-
-	return props_work(&handle->props, respond, worker, size, body);
-}
-
-static inline LV2_Worker_Status
-_work_response(LV2_Handle instance, uint32_t size, const void *body)
-{
-	plughandle_t *handle = instance;
-
-	return props_work_response(&handle->props, size, body);
-}
-
-static const LV2_Worker_Interface work_iface = {
-	.work = _work,
-	.work_response = _work_response,
-	.end_run = NULL
-};
-
 static const void*
 extension_data(const char* uri)
 {
 	if(!strcmp(uri, LV2_STATE__interface))
 		return &state_iface;
-	else if(!strcmp(uri, LV2_WORKER__interface))
-		return &work_iface;
 
 	return NULL;
 }

@@ -28,7 +28,6 @@
 @prefix time: <http://lv2plug.in/ns/ext/time#> .
 @prefix patch: <http://lv2plug.in/ns/ext/patch#> .
 @prefix units: <http://lv2plug.in/ns/extensions/units#> .
-@prefix work: <http://lv2plug.in/ns/ext/worker#> .
 @prefix pset: <http://lv2plug.in/ns/ext/presets#> .
 
 @prefix lic: <http://opensource.org/licenses/> .
@@ -199,9 +198,9 @@ vm:control
 	doap:name "VM Control" ;
 	doap:license lic:Artistic-2.0 ;
 	lv2:project proj:vm ;
-	lv2:requiredFeature urid:map, work:schedule, state:loadDefaultState ;
+	lv2:requiredFeature urid:map, state:loadDefaultState ;
 	lv2:optionalFeature lv2:isLive, lv2:hardRTCapable, log:log, state:threadSafeRestore ;
-	lv2:extensionData state:interface, work:interface ;
+	lv2:extensionData state:interface ;
 
 	lv2:port [
 	  a lv2:InputPort ,
@@ -388,9 +387,9 @@ vm:cv
 	doap:name "VM CV" ;
 	doap:license lic:Artistic-2.0 ;
 	lv2:project proj:vm ;
-	lv2:requiredFeature urid:map, work:schedule, state:loadDefaultState ;
+	lv2:requiredFeature urid:map, state:loadDefaultState ;
 	lv2:optionalFeature lv2:isLive, lv2:hardRTCapable, log:log, state:threadSafeRestore ;
-	lv2:extensionData state:interface, work:interface ;
+	lv2:extensionData state:interface ;
 
 	lv2:port [
 	  a lv2:InputPort ,
@@ -577,9 +576,9 @@ vm:audio
 	doap:name "VM Audio" ;
 	doap:license lic:Artistic-2.0 ;
 	lv2:project proj:vm ;
-	lv2:requiredFeature urid:map, work:schedule, state:loadDefaultState ;
+	lv2:requiredFeature urid:map, state:loadDefaultState ;
 	lv2:optionalFeature lv2:isLive, lv2:hardRTCapable, log:log, state:threadSafeRestore ;
-	lv2:extensionData state:interface, work:interface ;
+	lv2:extensionData state:interface ;
 
 	lv2:port [
 	  a lv2:InputPort ,
@@ -726,9 +725,9 @@ vm:atom
 	doap:name "VM Atom" ;
 	doap:license lic:Artistic-2.0 ;
 	lv2:project proj:vm ;
-	lv2:requiredFeature urid:map, work:schedule, state:loadDefaultState ;
+	lv2:requiredFeature urid:map, state:loadDefaultState ;
 	lv2:optionalFeature lv2:isLive, lv2:hardRTCapable, log:log, state:threadSafeRestore ;
-	lv2:extensionData state:interface, work:interface ;
+	lv2:extensionData state:interface ;
 
 	lv2:port [
 	  a lv2:InputPort ,

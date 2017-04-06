@@ -124,8 +124,7 @@ static const char *ms_label = "#ms:";
 static const char *nil_label = "#";
 
 static void
-_intercept_graph(void *data, LV2_Atom_Forge *forge, int64_t frames,
-	props_event_t event, props_impl_t *impl)
+_intercept_graph(void *data, int64_t frames, props_impl_t *impl)
 {
 	plughandle_t *handle = data;
 
@@ -141,7 +140,6 @@ static const props_def_t defs [MAX_NPROPS] = {
 		.offset = offsetof(plugstate_t, graph),
 		.type = LV2_ATOM__Tuple,
 		.max_size = GRAPH_SIZE,
-		.event_mask = PROP_EVENT_WRITE,
 		.event_cb = _intercept_graph
 	}
 };
@@ -695,9 +693,9 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 				ser->offset = 0;
 				lv2_atom_forge_set_sink(&handle->forge, _sink, _deref, ser);
 				vm_serialize(handle->api, &handle->forge, handle->cmds);
-				props_impl_t *impl = _props_impl_search(&handle->props, handle->vm_graph);
+				props_impl_t *impl = _props_bsearch(&handle->props, handle->vm_graph);
 				if(impl)
-					_props_set(&handle->props, impl, ser->atom->type, ser->atom->size, LV2_ATOM_BODY_CONST(ser->atom));
+					_props_impl_set(&handle->props, impl, ser->atom->type, ser->atom->size, LV2_ATOM_BODY_CONST(ser->atom));
 
 				_set_property(handle, handle->vm_graph);
 			}
@@ -810,16 +808,11 @@ instantiate(const LV2UI_Descriptor *descriptor, const char *plugin_uri,
 
 	vm_api_init(handle->api, handle->map);
 
-	if(!props_init(&handle->props, MAX_NPROPS, plugin_uri, handle->map, handle))
+	if(!props_init(&handle->props, plugin_uri,
+		defs, MAX_NPROPS,
+		&handle->state, &handle->stash, handle->map, handle))
 	{
 		fprintf(stderr, "props_init failed\n");
-		free(handle);
-		return NULL;
-	}
-
-	if(!props_register(&handle->props, defs, MAX_NPROPS, &handle->state, &handle->stash))
-	{
-		fprintf(stderr, "props_register failed\n");
 		free(handle);
 		return NULL;
 	}
