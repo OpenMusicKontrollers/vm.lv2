@@ -120,6 +120,10 @@ static const struct nk_color plot_fg_color = {
 	.r = 0xbb, .g = 0x66, .b = 0x00, .a = 0xff
 };
 
+static const struct nk_color plot_fg2_color = {
+	.r = 0xbb, .g = 0x66, .b = 0x00, .a = 0x7f
+};
+
 static const char *ms_label = "#ms:";
 static const char *nil_label = "#";
 
@@ -213,7 +217,7 @@ _set_property(plughandle_t *handle, LV2_URID property)
 }
 
 static inline void
-_draw_plot(struct nk_context *ctx, const float *vals)
+_draw_plot(struct nk_context *ctx, const float *vals, vm_plug_enum_t vm_plug)
 {
 	struct nk_command_buffer *canvas = nk_window_get_canvas(ctx);
 
@@ -231,9 +235,11 @@ _draw_plot(struct nk_context *ctx, const float *vals)
 		nk_fill_rect(canvas, bounds, 0.f, plot_bg_color);
 		nk_stroke_rect(canvas, bounds, 0.f, 1.f, ctx->style.window.border_color);
 
-		float mem [PLOT_MAX*2];
+		float mem [PLOT_MAX*4];
 		float x0 = -1.f;
-		unsigned j = 0;
+		unsigned J = 0;
+
+		const float yh = bounds.y + 0.5f*bounds.h;
 
 		for(unsigned i = 0; i < PLOT_MAX; i++)
 		{
@@ -243,17 +249,47 @@ _draw_plot(struct nk_context *ctx, const float *vals)
 				continue;
 
 			const float sy = vals[i] / VM_VIS;
-			const float y1 = bounds.y + (0.5f - sy)*bounds.h;
 
-			mem[j++] = x1;
-			mem[j++] = y1;
-			x0 = x1;
+			if(vm_plug == VM_PLUG_AUDIO)
+			{
+				mem[J++] = x1;
+				mem[J++] = fabsf(sy);
+				x0 = x1;
+			}
+			else
+			{
+				const float dy = sy*bounds.h;
+
+				mem[J++] = x1;
+				mem[J++] = yh - dy;
+				x0 = x1;
+			}
 		}
 
-		const float yh = bounds.y + 0.5f*bounds.h;
 		nk_stroke_line(canvas, bounds.x, yh, bounds.x + bounds.w, yh, 1.f,
 			ctx->style.window.border_color);
-		nk_stroke_polyline(canvas, mem, j/2, 1.f, plot_fg_color);
+
+		if(vm_plug == VM_PLUG_AUDIO)
+		{
+			for(unsigned j = 0, k = 2*J; j < J; j += 2, k -= 2)
+			{
+				const float x = mem[j];
+				const float sy = mem[j + 1];
+				const float dy = sy*bounds.h;
+				const float y1 = yh - dy;
+				const float y2 = yh + dy;
+
+				mem[j + 1] = y1;
+
+				mem[k - 1] = y2;
+				mem[k - 2] = x;
+			}
+
+			nk_stroke_polyline(canvas, &mem[J], J/2, 1.f, plot_fg2_color);
+		}
+
+		nk_stroke_polyline(canvas, mem, J/2, 1.f, plot_fg_color);
+
 		nk_push_scissor(canvas, old_clip);
 	}
 }
@@ -430,7 +466,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 			for(unsigned i = 0; i < CTRL_MAX; i++)
 			{
 				nk_layout_row_dynamic(ctx, dy*4, 1);
-				_draw_plot(ctx, handle->inp[i].vals);
+				_draw_plot(ctx, handle->inp[i].vals, handle->vm_plug);
 
 				nk_layout_row_dynamic(ctx, dy, 2);
 				if(  (handle->vm_plug == VM_PLUG_CONTROL)
@@ -708,7 +744,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 			for(unsigned i = 0; i < CTRL_MAX; i++)
 			{
 				nk_layout_row_dynamic(ctx, dy*4, 1);
-				_draw_plot(ctx, handle->outp[i].vals);
+				_draw_plot(ctx, handle->outp[i].vals, handle->vm_plug);
 
 				nk_layout_row_dynamic(ctx, dy, 2);
 				if(  (handle->vm_plug == VM_PLUG_CONTROL)
@@ -824,7 +860,7 @@ instantiate(const LV2UI_Descriptor *descriptor, const char *plugin_uri,
 	handle->writer = write_function;
 
 	nk_pugl_config_t *cfg = &handle->win.cfg;
-	cfg->width = 720;
+	cfg->width = 1280;
 	cfg->height = 720;
 	cfg->resizable = true;
 	cfg->ignore = false;
