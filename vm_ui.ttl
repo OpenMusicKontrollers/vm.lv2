@@ -43,5 +43,5 @@ vm:vm_ui
 		ui:protocol atom:eventTransfer
 	] ;
 	lv2:requiredFeature ui:idleInterface, urid:map, urid:unmap ;
-	lv2:optionalFeature log:log ;
-  lv2:extensionData ui:idleInterface .
+	lv2:optionalFeature log:log, ui:resize ;
+  lv2:extensionData ui:idleInterface, ui:resize .
