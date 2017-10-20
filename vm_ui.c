@@ -396,15 +396,15 @@ _wheel_float(struct nk_context *ctx, float *value, float stp)
 
 	if(nk_input_is_mouse_hovering_rect(&ctx->input, bounds))
 	{
-		if(ctx->input.mouse.scroll_delta > 0.f)
+		if(ctx->input.mouse.scroll_delta.y > 0.f)
 		{
 			*value += stp;
-			ctx->input.mouse.scroll_delta = 0.f;
+			ctx->input.mouse.scroll_delta.y = 0.f;
 		}
-		else if(ctx->input.mouse.scroll_delta < 0.f)
+		else if(ctx->input.mouse.scroll_delta.y < 0.f)
 		{
 			*value -= stp;
-			ctx->input.mouse.scroll_delta = 0.f;
+			ctx->input.mouse.scroll_delta.y = 0.f;
 		}
 	}
 }
@@ -416,15 +416,15 @@ _wheel_int(struct nk_context *ctx, int *value)
 
 	if(nk_input_is_mouse_hovering_rect(&ctx->input, bounds))
 	{
-		if(ctx->input.mouse.scroll_delta > 0.f)
+		if(ctx->input.mouse.scroll_delta.y > 0.f)
 		{
 			*value += 1;
-			ctx->input.mouse.scroll_delta = 0.f;
+			ctx->input.mouse.scroll_delta.y = 0.f;
 		}
-		else if(ctx->input.mouse.scroll_delta < 0.f)
+		else if(ctx->input.mouse.scroll_delta.y < 0.f)
 		{
 			*value -= 1;
-			ctx->input.mouse.scroll_delta = 0.f;
+			ctx->input.mouse.scroll_delta.y = 0.f;
 		}
 	}
 }
@@ -446,9 +446,10 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 	if(has_shift)
 		scl /= 4;
 
-	if(nk_begin(ctx, "Vm", wbounds, NK_WINDOW_NO_SCROLLBAR))
+	const char *window_name = "Vm";
+	if(nk_begin(ctx, window_name, wbounds, NK_WINDOW_NO_SCROLLBAR))
 	{
-		nk_window_set_bounds(ctx, wbounds);
+		nk_window_set_bounds(ctx, window_name, wbounds);
 		struct nk_command_buffer *canvas = nk_window_get_canvas(ctx);
 
 		const float wh = wbounds.h
