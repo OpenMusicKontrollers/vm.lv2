@@ -18,6 +18,8 @@
 @prefix atom: <http://lv2plug.in/ns/ext/atom#> .
 @prefix urid:	<http://lv2plug.in/ns/ext/urid#> .
 @prefix log:	<http://lv2plug.in/ns/ext/log#> .
+@prefix opts:	<http://lv2plug.in/ns/ext/options#> .
+@prefix param: <http://lv2plug.in/ns/ext/parameters#> .
 
 @prefix vm:	<http://open-music-kontrollers.ch/lv2/vm#> .
 
@@ -43,5 +45,6 @@ vm:vm_ui
 		ui:protocol atom:eventTransfer
 	] ;
 	lv2:requiredFeature ui:idleInterface, urid:map, urid:unmap ;
-	lv2:optionalFeature log:log, ui:resize ;
-  lv2:extensionData ui:idleInterface, ui:resize .
+	lv2:optionalFeature log:log, ui:resize, opts:options ;
+  lv2:extensionData ui:idleInterface, ui:resize ;
+	opts:supportedOption param:sampleRate .
