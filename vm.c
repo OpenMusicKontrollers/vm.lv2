@@ -1004,15 +1004,27 @@ run_cv_audio_advance(plughandle_t *handle, const LV2_Atom_Object *obj,
 			if(timely_advance(&handle->timely, obj, i, i + 1))
 				obj = NULL; // invalidate obj for further steps if handled
 
+			// make it inplace-safe
+			const float tmp [CTRL_MAX] = {
+				handle->in[0].flt[i],
+				handle->in[1].flt[i],
+				handle->in[2].flt[i],
+				handle->in[3].flt[i],
+				handle->in[4].flt[i],
+				handle->in[5].flt[i],
+				handle->in[6].flt[i],
+				handle->in[7].flt[i]
+			};
+
 			const float *in [CTRL_MAX ] = {
-				&handle->in[0].flt[i],
-				&handle->in[1].flt[i],
-				&handle->in[2].flt[i],
-				&handle->in[3].flt[i],
-				&handle->in[4].flt[i],
-				&handle->in[5].flt[i],
-				&handle->in[6].flt[i],
-				&handle->in[7].flt[i]
+				&tmp[0],
+				&tmp[1],
+				&tmp[2],
+				&tmp[3],
+				&tmp[4],
+				&tmp[5],
+				&tmp[6],
+				&tmp[7]
 			};
 
 			float *out [CTRL_MAX ] = {
