@@ -35,7 +35,6 @@
 #define VM_URI                "http://open-music-kontrollers.ch/lv2/vm"
 #define VM_PREFIX             VM_URI"#"
 
-#define VM__vm                VM_PREFIX"vm"
 #define VM__vm_ui             VM_PREFIX"vm_ui"
 
 #define VM__graph             VM_PREFIX"graph"
@@ -70,7 +69,8 @@ enum _vm_plug_enum_t {
 	VM_PLUG_CONTROL = 0,
 	VM_PLUG_CV,
 	VM_PLUG_AUDIO,
-	VM_PLUG_ATOM
+	VM_PLUG_ATOM,
+	VM_PLUG_MIDI
 };
 
 enum _vm_status_t {
@@ -814,6 +814,8 @@ vm_plug_type(const char *plugin_uri)
 		return VM_PLUG_AUDIO;
 	else if(!strcmp(plugin_uri, VM_PREFIX"atom"))
 		return VM_PLUG_ATOM;
+	else if(!strcmp(plugin_uri, VM_PREFIX"midi"))
+		return VM_PLUG_MIDI;
 
 	return VM_PLUG_CONTROL;
 }

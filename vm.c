@@ -68,6 +68,7 @@ struct _plughandle_t {
 	vm_plug_enum_t vm_plug;
 
 	LV2_URID vm_graph;
+	LV2_URID midi_MidiEvent;
 
 	LV2_Log_Log *log;
 	LV2_Log_Logger logger;
@@ -227,6 +228,7 @@ instantiate(const LV2_Descriptor* descriptor, num_t rate,
 		lv2_log_logger_init(&handle->logger, handle->map, handle->log);
 
 	handle->vm_graph = handle->map->map(handle->map->handle, VM__graph);
+	handle->midi_MidiEvent = handle->map->map(handle->map->handle, LV2_MIDI__MidiEvent);
 
 	lv2_atom_forge_init(&handle->forge, handle->map);
 	for(unsigned i = 0; i < CTRL_MAX; i++)
@@ -234,7 +236,6 @@ instantiate(const LV2_Descriptor* descriptor, num_t rate,
 
 	vm_api_init(handle->api, handle->map);
 	timely_init(&handle->timely, handle->map, rate, 0, _cb, handle);
-
 
 	if(!props_init(&handle->props, descriptor->URI,
 		defs, MAX_NPROPS,
@@ -903,13 +904,32 @@ loop: {
 		{
 			*out[i] = out1;
 
-			if(forgs && (handle->vm_plug == VM_PLUG_ATOM) )
+			if(forgs)
 			{
-				// send changes on atom output ports
-				if(forgs[i].ref)
-					forgs[i].ref = lv2_atom_forge_frame_time(&forgs[i].forge, frames);
-				if(handle->ref)
-					forgs[i].ref = lv2_atom_forge_float(&forgs[i].forge, out1);
+				if(handle->vm_plug == VM_PLUG_ATOM)
+				{
+					// send changes on atom output ports
+					if(forgs[i].ref)
+						forgs[i].ref = lv2_atom_forge_frame_time(&forgs[i].forge, frames);
+					if(handle->ref)
+						forgs[i].ref = lv2_atom_forge_float(&forgs[i].forge, out1);
+				}
+				else if(handle->vm_plug == VM_PLUG_MIDI)
+				{
+					const uint8_t msg [3] = {
+						LV2_MIDI_MSG_CONTROLLER | 0x0, //FIXME
+						0x1, //FIXME
+						floor(out1 * 0x7f) //FIXME
+					};
+
+					// send changes on atom output ports
+					if(forgs[i].ref)
+						forgs[i].ref = lv2_atom_forge_frame_time(&forgs[i].forge, frames);
+					if(handle->ref)
+						forgs[i].ref = lv2_atom_forge_atom(&forgs[i].forge, sizeof(msg), handle->midi_MidiEvent);
+					if(handle->ref)
+						forgs[i].ref = lv2_atom_forge_write(&forgs[i].forge, &msg, sizeof(msg));
+				}
 			}
 
 			if(out1 != handle->outm[i])
@@ -1242,6 +1262,170 @@ run_atom(LV2_Handle instance, uint32_t nsamples)
 }
 
 static void
+run_midi_advance(plughandle_t *handle, const LV2_Atom_Object *obj,
+	uint32_t from, uint32_t to, const float *in [CTRL_MAX], float *out [CTRL_MAX],
+	forge_t forgs [CTRL_MAX])
+{
+	if(from == to) // just run timely_advance for void range
+	{
+		timely_advance(&handle->timely, obj, from, to);
+	}
+	else
+	{
+		for(unsigned i = from; i < to; i++)
+		{
+			if(timely_advance(&handle->timely, obj, i, i + 1))
+				obj = NULL; // invalidate obj for further steps if handled
+
+			run_internal(handle, i, in, out, forgs);
+		}
+	}
+}
+
+static void
+run_midi(LV2_Handle instance, uint32_t nsamples)
+{
+	plughandle_t *handle = instance;
+
+	const uint32_t capacity = handle->notify->atom.size;
+	LV2_Atom_Forge_Frame frame;
+	lv2_atom_forge_set_buffer(&handle->forge, (uint8_t *)handle->notify, capacity);
+	handle->ref = lv2_atom_forge_sequence_head(&handle->forge, &frame, 0);
+
+	run_pre(handle);
+	props_idle(&handle->props, &handle->forge, 0, &handle->ref);
+
+	forge_t *forgs = handle->forgs;
+	float pin [CTRL_MAX];
+	float pout [CTRL_MAX];
+
+	for(unsigned i = 0; i < CTRL_MAX; i++)
+	{
+		lv2_atom_forge_set_buffer(&forgs[i].forge, (uint8_t *)handle->out[i].seq, handle->out[i].seq->atom.size);
+		forgs[i].ref = lv2_atom_forge_sequence_head(&forgs[i].forge, &forgs[i].frame, 0);
+
+		pin[i] = handle->in0[i];
+		pout[i] = handle->out0[i];
+	}
+
+	const float *in [CTRL_MAX ] = {
+		&pin[0],
+		&pin[1],
+		&pin[2],
+		&pin[3],
+		&pin[4],
+		&pin[5],
+		&pin[6],
+		&pin[7]
+	};
+
+	float *out [CTRL_MAX ] = {
+		&pout[0],
+		&pout[1],
+		&pout[2],
+		&pout[3],
+		&pout[4],
+		&pout[5],
+		&pout[6],
+		&pout[7]
+	};
+
+	const unsigned nseqs = CTRL_MAX + 1;
+	const LV2_Atom_Sequence *seqs [nseqs];
+	const LV2_Atom_Event *evs [nseqs];
+
+	for(unsigned i = 0; i < nseqs; i++)
+	{
+		seqs[i] = (i == 0)
+			? handle->control
+			: handle->in[i-1].seq;
+
+		evs[i] = lv2_atom_sequence_begin(&seqs[i]->body);
+	}
+
+	int64_t last_t = 0;
+	while(true)
+	{
+		int nxt = -1;
+		int64_t frames = nsamples;
+
+		// search next event
+		for(unsigned i = 0; i < nseqs; i++)
+		{
+			if(!evs[i] || lv2_atom_sequence_is_end(&seqs[i]->body, seqs[i]->atom.size, evs[i]))
+			{
+				evs[i] = NULL; // invalidate, sequence has been drained
+				continue;
+			}
+
+			if(evs[i]->time.frames < frames)
+			{
+				frames = evs[i]->time.frames;
+				nxt = i;
+			}
+		}
+
+		if(nxt == -1)
+			break; // no events anymore, exit loop
+
+		// handle event
+		{
+			const bool is_control = (nxt == 0); // is event from control port?
+			const LV2_Atom_Event *ev = evs[nxt];
+			const LV2_Atom *atom= &ev->body;
+			const LV2_Atom_Object *obj = (const LV2_Atom_Object *)&ev->body;
+			const uint8_t *msg = LV2_ATOM_BODY_CONST(atom);
+			const uint8_t lnibble = LV2_MIDI_MSG_CONTROLLER; //FIXME
+			const uint8_t rnibble = 0x0; //FIXME
+			const uint8_t controller = 0x1; //FIXME
+
+			if(is_control)
+			{
+				props_advance(&handle->props, &handle->forge, ev->time.frames, obj, &handle->ref);
+			}
+			else if( (atom->type == handle->midi_MidiEvent)
+				&& ( (msg[0] & 0xf0) == lnibble)
+				&& ( (msg[0] & 0x0f) == rnibble)
+				&& ( (msg[1] & 0x0f) == controller) )
+			{
+				pin[nxt-1] = msg[2] / 127.0;
+			}
+
+
+			run_midi_advance(handle, is_control ? obj : NULL, last_t, ev->time.frames, in, out, forgs);
+
+			last_t = ev->time.frames;
+		}
+
+		// advance event iterator on active sequence
+		evs[nxt] = lv2_atom_sequence_next(evs[nxt]);
+	}
+	run_midi_advance(handle, NULL, last_t, nsamples, in, out, forgs);
+
+	run_post(handle, nsamples - 1);
+
+	if(handle->ref)
+		handle->ref = lv2_atom_forge_frame_time(&handle->forge, nsamples - 1);
+	if(handle->ref)
+		handle->ref = lv2_atom_forge_long(&handle->forge, handle->off);
+
+	if(handle->ref)
+		lv2_atom_forge_pop(&handle->forge, &frame);
+	else
+		lv2_atom_sequence_clear(handle->notify);
+
+	for(unsigned i = 0; i < CTRL_MAX; i++)
+	{
+		if(forgs[i].ref)
+			lv2_atom_forge_pop(&forgs[i].forge, &forgs[i].frame);
+		else
+			lv2_atom_sequence_clear(handle->out[i].seq);
+	}
+
+	handle->off += nsamples;
+}
+
+static void
 cleanup(LV2_Handle instance)
 {
 	plughandle_t *handle = instance;
@@ -1325,6 +1509,17 @@ static const LV2_Descriptor vm_atom = {
 	.extension_data = extension_data
 };
 
+static const LV2_Descriptor vm_midi = {
+	.URI            = VM_PREFIX"midi",
+	.instantiate    = instantiate,
+	.connect_port   = connect_port,
+	.activate       = NULL,
+	.run            = run_midi,
+	.deactivate     = NULL,
+	.cleanup        = cleanup,
+	.extension_data = extension_data
+};
+
 LV2_SYMBOL_EXPORT const LV2_Descriptor*
 lv2_descriptor(uint32_t index)
 {
@@ -1338,6 +1533,8 @@ lv2_descriptor(uint32_t index)
 			return &vm_audio;
 		case 3:
 			return &vm_atom;
+		case 4:
+			return &vm_midi;
 
 		default:
 			return NULL;
