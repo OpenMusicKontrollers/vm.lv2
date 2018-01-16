@@ -67,6 +67,7 @@ typedef enum _vm_filter_enum_t vm_filter_enum_t;
 typedef struct _vm_command_t vm_command_t;
 typedef struct _vm_api_def_t vm_api_def_t;
 typedef struct _vm_api_impl_t vm_api_impl_t;
+typedef struct _vm_filter_impl_t vm_filter_impl_t;
 typedef struct _vm_filter_t vm_filter_t;
 typedef struct _plugstate_t plugstate_t;
 
@@ -214,6 +215,12 @@ struct _vm_filter_t {
 	vm_filter_enum_t type;
 	uint8_t channel;
 	uint8_t value;
+};
+
+struct _vm_filter_impl_t {
+	LV2_URID midi_Controller;
+	LV2_URID midi_channel;
+	LV2_URID midi_controllerNumber;
 };
 
 struct _plugstate_t {
@@ -865,7 +872,7 @@ vm_api_map(vm_api_impl_t *impl, vm_opcode_enum_t op)
 }
 
 static inline LV2_Atom_Forge_Ref
-vm_serialize(vm_api_impl_t *impl, LV2_Atom_Forge *forge, const vm_command_t *cmds)
+vm_graph_serialize(vm_api_impl_t *impl, LV2_Atom_Forge *forge, const vm_command_t *cmds)
 {
 	LV2_Atom_Forge_Frame frame;
 	LV2_Atom_Forge_Ref ref = lv2_atom_forge_tuple(forge, &frame);
@@ -917,7 +924,7 @@ vm_serialize(vm_api_impl_t *impl, LV2_Atom_Forge *forge, const vm_command_t *cmd
 }
 
 static inline vm_status_t
-vm_deserialize(vm_api_impl_t *impl, LV2_Atom_Forge *forge,
+vm_graph_deserialize(vm_api_impl_t *impl, LV2_Atom_Forge *forge,
 	vm_command_t *cmds, uint32_t size, const LV2_Atom *body)
 {
 	vm_command_t *cmd = cmds;
@@ -986,6 +993,89 @@ vm_deserialize(vm_api_impl_t *impl, LV2_Atom_Forge *forge,
 	}
 
 	return state;
+}
+
+static inline LV2_Atom_Forge_Ref
+vm_filter_serialize(LV2_Atom_Forge *forge, const vm_filter_impl_t *impl,
+	const vm_filter_t *filters)
+{
+	LV2_Atom_Forge_Frame frame [2];
+	LV2_Atom_Forge_Ref ref = lv2_atom_forge_tuple(forge, &frame[0]);
+
+	for(unsigned i = 0; i < ITEMS_MAX; i++)
+	{
+		const vm_filter_t *filter = &filter[i];
+
+		switch(filter->type)
+		{
+			case FILTER_CONTROLLER:
+			{
+				if(ref)
+					ref = lv2_atom_forge_object(forge, &frame[1], impl->midi_Controller, 0);
+
+				if(ref)
+					lv2_atom_forge_key(forge, impl->midi_channel);
+				if(ref)
+					lv2_atom_forge_int(forge, filter->channel);
+
+				if(ref)
+					lv2_atom_forge_key(forge, impl->midi_controllerNumber);
+				if(ref)
+					lv2_atom_forge_int(forge, filter->value);
+
+				if(ref)
+					lv2_atom_forge_pop(forge, &frame[1]);
+			} break;
+			//FIXME handle more types
+		}
+	}
+
+	if(ref)
+		lv2_atom_forge_pop(forge, &frame[0]);
+
+	return ref;
+}
+
+static inline int
+vm_filter_deserialize(LV2_Atom_Forge *forge, const vm_filter_impl_t *impl,
+	vm_filter_t *filters, uint32_t size, const LV2_Atom *body)
+{
+	memset(filters, 0x0, sizeof(vm_filter_t)*CTRL_MAX);
+
+	unsigned i = 0;
+	LV2_ATOM_TUPLE_BODY_FOREACH(body, size, atom)
+	{
+		vm_filter_t *filter = &filters[i];
+
+		if(lv2_atom_forge_is_object_type(forge, atom->type))
+		{
+			const LV2_Atom_Object *obj = (const LV2_Atom_Object *)atom;
+
+			if(obj->body.otype == impl->midi_Controller)
+			{
+				const LV2_Atom_Int *channel = NULL;
+				const LV2_Atom_Int *value = NULL;
+
+				lv2_atom_object_get(obj,
+					impl->midi_channel, &channel,
+					impl->midi_controllerNumber, &value,
+					0);
+
+				filter->type = FILTER_CONTROLLER;
+
+				if(channel && (channel->atom.type == forge->Int) )
+					filter->channel = channel->body;
+
+				if(value && (value->atom.type == forge->Int) )
+					filter->value = value->body;
+			}
+			//FIXME handle more types
+		}
+
+		i += 1;
+	}
+
+	return 0;
 }
 
 #endif // _VM_LV2_H

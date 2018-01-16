@@ -136,7 +136,7 @@ _intercept_graph(void *data, int64_t frames, props_impl_t *impl)
 
 	handle->graph_size = impl->value.size;
 
-	vm_deserialize(handle->api, &handle->forge, handle->cmds,
+	vm_graph_deserialize(handle->api, &handle->forge, handle->cmds,
 		impl->value.size, impl->value.body);
 }
 
@@ -760,7 +760,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 				atom_ser_t *ser = &handle->ser;
 				ser->offset = 0;
 				lv2_atom_forge_set_sink(&handle->forge, _sink, _deref, ser);
-				vm_serialize(handle->api, &handle->forge, handle->cmds);
+				vm_graph_serialize(handle->api, &handle->forge, handle->cmds);
 				props_impl_t *impl = _props_bsearch(&handle->props, handle->vm_graph);
 				if(impl)
 					_props_impl_set(&handle->props, impl, ser->atom->type, ser->atom->size, LV2_ATOM_BODY_CONST(ser->atom));

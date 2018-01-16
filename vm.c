@@ -96,6 +96,7 @@ struct _plughandle_t {
 	vm_api_impl_t api [OP_MAX];
 	vm_filter_t sourceFilter [CTRL_MAX];
 	vm_filter_t destinationFilter [CTRL_MAX];
+	vm_filter_impl_t filt;
 
 	vm_stack_t stack;
 	bool needs_recalc;
@@ -175,13 +176,11 @@ _intercept_graph(void *data, int64_t frames, props_impl_t *impl)
 	plughandle_t *handle = data;
 
 	handle->graph_size = impl->value.size;
-	handle->needs_recalc = true;
 
-	handle->status = vm_deserialize(handle->api, &handle->forge, handle->cmds,
+	handle->status = vm_graph_deserialize(handle->api, &handle->forge, handle->cmds,
 		impl->value.size, impl->value.body);
 
 	handle->needs_recalc = true;
-
 	_dirty(handle);
 }
 
@@ -191,8 +190,12 @@ _intercept_sourceFilter(void *data, int64_t frames, props_impl_t *impl)
 	plughandle_t *handle = data;
 
 	handle->sourceFilter_size = impl->value.size;
-	handle->needs_recalc = true;
 
+	const int status = vm_filter_deserialize(&handle->forge, &handle->filt,
+		handle->sourceFilter, impl->value.size, impl->value.body);
+	(void)status; //FIXME
+
+	handle->needs_recalc = true;
 	_dirty(handle);
 }
 
@@ -202,8 +205,12 @@ _intercept_destinationFilter(void *data, int64_t frames, props_impl_t *impl)
 	plughandle_t *handle = data;
 
 	handle->destinationFilter_size = impl->value.size;
-	handle->needs_recalc = true;
 
+	const int status = vm_filter_deserialize(&handle->forge, &handle->filt,
+		handle->destinationFilter, impl->value.size, impl->value.body);
+	(void)status; //FIXME
+
+	handle->needs_recalc = true;
 	_dirty(handle);
 }
 
@@ -269,6 +276,10 @@ instantiate(const LV2_Descriptor* descriptor, num_t rate,
 
 	handle->vm_graph = handle->map->map(handle->map->handle, VM__graph);
 	handle->midi_MidiEvent = handle->map->map(handle->map->handle, LV2_MIDI__MidiEvent);
+
+	handle->filt.midi_Controller = handle->map->map(handle->map->handle, LV2_MIDI__Controller);
+	handle->filt.midi_channel = handle->map->map(handle->map->handle, LV2_MIDI__channel);
+	handle->filt.midi_controllerNumber = handle->map->map(handle->map->handle, LV2_MIDI__controllerNumber);
 
 	lv2_atom_forge_init(&handle->forge, handle->map);
 	for(unsigned i = 0; i < CTRL_MAX; i++)
