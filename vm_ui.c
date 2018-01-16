@@ -77,6 +77,8 @@ struct _plughandle_t {
 	plugstate_t stash;
 
 	uint32_t graph_size;
+	uint32_t sourceFilter_size;
+	uint32_t destinationFilter_size;
 
 	float dy;
 
@@ -138,6 +140,22 @@ _intercept_graph(void *data, int64_t frames, props_impl_t *impl)
 		impl->value.size, impl->value.body);
 }
 
+static void
+_intercept_sourceFilter(void *data, int64_t frames, props_impl_t *impl)
+{
+	plughandle_t *handle = data;
+
+	handle->sourceFilter_size = impl->value.size;
+}
+
+static void
+_intercept_destinationFilter(void *data, int64_t frames, props_impl_t *impl)
+{
+	plughandle_t *handle = data;
+
+	handle->destinationFilter_size = impl->value.size;
+}
+
 static const props_def_t defs [MAX_NPROPS] = {
 	{
 		.property = VM__graph,
@@ -145,6 +163,20 @@ static const props_def_t defs [MAX_NPROPS] = {
 		.type = LV2_ATOM__Tuple,
 		.max_size = GRAPH_SIZE,
 		.event_cb = _intercept_graph
+	},
+	{
+		.property = VM__sourceFilter,
+		.offset = offsetof(plugstate_t, sourceFilter),
+		.type = LV2_ATOM__Tuple,
+		.max_size = FILTER_SIZE,
+		.event_cb = _intercept_sourceFilter,
+	},
+	{
+		.property = VM__destinationFilter,
+		.offset = offsetof(plugstate_t, destinationFilter),
+		.type = LV2_ATOM__Tuple,
+		.max_size = FILTER_SIZE,
+		.event_cb = _intercept_destinationFilter,
 	}
 };
 
@@ -844,8 +876,12 @@ instantiate(const LV2UI_Descriptor *descriptor, const char *plugin_uri,
 
 	vm_api_init(handle->api, handle->map);
 
+	const int nprops = handle->vm_plug == VM_PLUG_MIDI
+		? MAX_NPROPS
+		: 1;
+
 	if(!props_init(&handle->props, plugin_uri,
-		defs, MAX_NPROPS,
+		defs, nprops,
 		&handle->state, &handle->stash, handle->map, handle))
 	{
 		fprintf(stderr, "props_init failed\n");

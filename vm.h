@@ -38,8 +38,10 @@
 #define VM__vm_ui             VM_PREFIX"vm_ui"
 
 #define VM__graph             VM_PREFIX"graph"
+#define VM__sourceFilter      VM_PREFIX"sourceFilter"
+#define VM__destinationFilter VM_PREFIX"destinationFilter"
 
-#define MAX_NPROPS 1
+#define MAX_NPROPS 3
 
 #define CTRL_MAX   0x8
 #define CTRL_MASK  (CTRL_MAX - 1)
@@ -47,6 +49,7 @@
 #define ITEMS_MAX  128
 #define ITEMS_MASK (ITEMS_MAX - 1)
 #define GRAPH_SIZE (ITEMS_MAX * sizeof(LV2_Atom_Long))
+#define FILTER_SIZE 0x1000 // 4K
 
 #define VM_MIN -1.f
 #define VM_MAX 1.f
@@ -60,9 +63,11 @@ typedef enum _vm_plug_enum_t vm_plug_enum_t;
 typedef enum _vm_status_t vm_status_t;
 typedef enum _vm_opcode_enum_t vm_opcode_enum_t;
 typedef enum _vm_command_enum_t vm_command_enum_t;
+typedef enum _vm_filter_enum_t vm_filter_enum_t;
 typedef struct _vm_command_t vm_command_t;
 typedef struct _vm_api_def_t vm_api_def_t;
 typedef struct _vm_api_impl_t vm_api_impl_t;
+typedef struct _vm_filter_t vm_filter_t;
 typedef struct _plugstate_t plugstate_t;
 
 enum _vm_plug_enum_t {
@@ -178,6 +183,10 @@ enum _vm_command_enum_t {
 	COMMAND_MAX,
 };
 
+enum _vm_filter_enum_t {
+	FILTER_CONTROLLER = 0,
+};
+
 struct _vm_command_t {
 	vm_command_enum_t type;
 
@@ -201,8 +210,16 @@ struct _vm_api_impl_t {
 	LV2_URID urid;
 };
 
+struct _vm_filter_t {
+	vm_filter_enum_t type;
+	uint8_t channel;
+	uint8_t value;
+};
+
 struct _plugstate_t {
 	uint8_t graph [GRAPH_SIZE];
+	uint8_t sourceFilter [FILTER_SIZE];
+	uint8_t destinationFilter [FILTER_SIZE];
 };
 
 static const char *command_labels [COMMAND_MAX] = {

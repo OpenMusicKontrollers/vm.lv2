@@ -91,7 +91,11 @@ struct _plughandle_t {
 	plugstate_t stash;
 
 	uint32_t graph_size;
+	uint32_t sourceFilter_size;
+	uint32_t destinationFilter_size;
 	vm_api_impl_t api [OP_MAX];
+	vm_filter_t sourceFilter [CTRL_MAX];
+	vm_filter_t destinationFilter [CTRL_MAX];
 
 	vm_stack_t stack;
 	bool needs_recalc;
@@ -181,6 +185,28 @@ _intercept_graph(void *data, int64_t frames, props_impl_t *impl)
 	_dirty(handle);
 }
 
+static void
+_intercept_sourceFilter(void *data, int64_t frames, props_impl_t *impl)
+{
+	plughandle_t *handle = data;
+
+	handle->sourceFilter_size = impl->value.size;
+	handle->needs_recalc = true;
+
+	_dirty(handle);
+}
+
+static void
+_intercept_destinationFilter(void *data, int64_t frames, props_impl_t *impl)
+{
+	plughandle_t *handle = data;
+
+	handle->destinationFilter_size = impl->value.size;
+	handle->needs_recalc = true;
+
+	_dirty(handle);
+}
+
 static const props_def_t defs [MAX_NPROPS] = {
 	{
 		.property = VM__graph,
@@ -188,6 +214,20 @@ static const props_def_t defs [MAX_NPROPS] = {
 		.type = LV2_ATOM__Tuple,
 		.max_size = GRAPH_SIZE,
 		.event_cb = _intercept_graph,
+	},
+	{
+		.property = VM__sourceFilter,
+		.offset = offsetof(plugstate_t, sourceFilter),
+		.type = LV2_ATOM__Tuple,
+		.max_size = FILTER_SIZE,
+		.event_cb = _intercept_sourceFilter,
+	},
+	{
+		.property = VM__destinationFilter,
+		.offset = offsetof(plugstate_t, destinationFilter),
+		.type = LV2_ATOM__Tuple,
+		.max_size = FILTER_SIZE,
+		.event_cb = _intercept_destinationFilter,
 	}
 };
 
@@ -237,8 +277,12 @@ instantiate(const LV2_Descriptor* descriptor, num_t rate,
 	vm_api_init(handle->api, handle->map);
 	timely_init(&handle->timely, handle->map, rate, 0, _cb, handle);
 
+	const int nprops = handle->vm_plug == VM_PLUG_MIDI
+		? MAX_NPROPS
+		: 1;
+
 	if(!props_init(&handle->props, descriptor->URI,
-		defs, MAX_NPROPS,
+		defs, nprops,
 		&handle->state, &handle->stash, handle->map, handle))
 	{
 		fprintf(stderr, "props_init failed\n");
@@ -1282,6 +1326,27 @@ run_midi_advance(plughandle_t *handle, const LV2_Atom_Object *obj,
 	}
 }
 
+static bool
+filter_midi(plughandle_t *handle, vm_filter_t *filter, const uint8_t *msg, float *f32)
+{
+	switch(filter->type)
+	{
+		case FILTER_CONTROLLER:
+		{
+			if(  (msg[0] == (LV2_MIDI_MSG_CONTROLLER | filter->channel) )
+				&& (msg[1] == filter->value) )
+			{
+				*f32 = msg[2] / 127.f;
+
+				return true;
+			}
+		} break;
+		//FIXME handle more filter types
+	}
+
+	return false;
+}
+
 static void
 run_midi(LV2_Handle instance, uint32_t nsamples)
 {
@@ -1375,20 +1440,16 @@ run_midi(LV2_Handle instance, uint32_t nsamples)
 			const LV2_Atom *atom= &ev->body;
 			const LV2_Atom_Object *obj = (const LV2_Atom_Object *)&ev->body;
 			const uint8_t *msg = LV2_ATOM_BODY_CONST(atom);
-			const uint8_t lnibble = LV2_MIDI_MSG_CONTROLLER; //FIXME
-			const uint8_t rnibble = 0x0; //FIXME
-			const uint8_t controller = 0x1; //FIXME
+			float f32 = 0;
 
 			if(is_control)
 			{
 				props_advance(&handle->props, &handle->forge, ev->time.frames, obj, &handle->ref);
 			}
 			else if( (atom->type == handle->midi_MidiEvent)
-				&& ( (msg[0] & 0xf0) == lnibble)
-				&& ( (msg[0] & 0x0f) == rnibble)
-				&& ( (msg[1] & 0x0f) == controller) )
+				&& filter_midi(handle, &handle->sourceFilter[nxt-1], msg, &f32) )
 			{
-				pin[nxt-1] = msg[2] / 127.0;
+				pin[nxt-1] = f32;
 			}
 
 
