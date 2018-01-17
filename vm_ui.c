@@ -63,6 +63,8 @@ struct _plughandle_t {
 
 	LV2_URID atom_eventTransfer;
 	LV2_URID vm_graph;
+	LV2_URID vm_sourceFilter;
+	LV2_URID vm_destinationFilter;
 
 	LV2_Log_Log *log;
 	LV2_Log_Logger logger;
@@ -131,6 +133,8 @@ static const struct nk_color plot_fg2_color = {
 
 static const char *ms_label = "#ms:";
 static const char *nil_label = "#";
+static const char *chn_label = "#chn";
+static const char *val_label = "#val";
 
 static void
 _intercept_graph(void *data, int64_t frames, props_impl_t *impl)
@@ -506,6 +510,8 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 			float stp;
 			float fpp;
 
+			bool sync = false;
+
 			for(unsigned i = 0; i < CTRL_MAX; i++)
 			{
 				nk_layout_row_dynamic(ctx, dy*4, 1);
@@ -567,6 +573,34 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 				nk_property_int(ctx, ms_label, 10, &handle->inp[i].window, 100000, 1, 1.f);
 				if(old_window != handle->inp[i].window)
 					memset(handle->inp[i].vals, 0x0, sizeof(float)*PLOT_MAX);
+
+				if(handle->vm_plug == VM_PLUG_MIDI)
+				{
+					vm_filter_t *filter = &handle->sourceFilter[i];
+
+					const int old_channel = filter->channel;
+					filter->channel = nk_propertyi(ctx, chn_label, 0x0, old_channel, 0x7, 1, 1.f);
+					if(old_channel != filter->channel)
+						sync = true;
+
+					const int old_value = filter->value;
+					filter->value = nk_propertyi(ctx, val_label, 0x0, old_value, 0x7f, 1, 1.f);
+					if(old_value != filter->value)
+						sync = true;
+				}
+			}
+
+			if(sync)
+			{
+				atom_ser_t *ser = &handle->ser;
+				ser->offset = 0;
+				lv2_atom_forge_set_sink(&handle->forge, _sink, _deref, ser);
+				vm_filter_serialize(&handle->forge, &handle->filt, handle->sourceFilter);
+				props_impl_t *impl = _props_bsearch(&handle->props, handle->vm_sourceFilter);
+				if(impl)
+					_props_impl_set(&handle->props, impl, ser->atom->type, ser->atom->size, LV2_ATOM_BODY_CONST(ser->atom));
+
+				_set_property(handle, handle->vm_sourceFilter);
 			}
 
 			nk_group_end(ctx);
@@ -790,6 +824,8 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 
 		if(nk_group_begin(ctx, "Outputs", NK_WINDOW_TITLE | NK_WINDOW_BORDER))
 		{
+			bool sync = false;
+
 			for(unsigned i = 0; i < CTRL_MAX; i++)
 			{
 				nk_layout_row_dynamic(ctx, dy*4, 1);
@@ -818,6 +854,34 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 				nk_property_int(ctx, ms_label, 10, &handle->outp[i].window, 100000, 1, 1.f);
 				if(old_window != handle->outp[i].window)
 					memset(handle->outp[i].vals, 0x0, sizeof(float)*PLOT_MAX);
+
+				if(handle->vm_plug == VM_PLUG_MIDI)
+				{
+					vm_filter_t *filter = &handle->destinationFilter[i];
+
+					const int old_channel = filter->channel;
+					filter->channel = nk_propertyi(ctx, chn_label, 0x0, old_channel, 0x7, 1, 1.f);
+					if(old_channel != filter->channel)
+						sync = true;
+
+					const int old_value = filter->value;
+					filter->value = nk_propertyi(ctx, val_label, 0x0, old_value, 0x7f, 1, 1.f);
+					if(old_value != filter->value)
+						sync = true;
+				}
+			}
+
+			if(sync)
+			{
+				atom_ser_t *ser = &handle->ser;
+				ser->offset = 0;
+				lv2_atom_forge_set_sink(&handle->forge, _sink, _deref, ser);
+				vm_filter_serialize(&handle->forge, &handle->filt, handle->destinationFilter);
+				props_impl_t *impl = _props_bsearch(&handle->props, handle->vm_destinationFilter);
+				if(impl)
+					_props_impl_set(&handle->props, impl, ser->atom->type, ser->atom->size, LV2_ATOM_BODY_CONST(ser->atom));
+
+				_set_property(handle, handle->vm_destinationFilter);
 			}
 
 			nk_group_end(ctx);
@@ -909,6 +973,8 @@ instantiate(const LV2UI_Descriptor *descriptor, const char *plugin_uri,
 
 	handle->atom_eventTransfer = handle->map->map(handle->map->handle, LV2_ATOM__eventTransfer);
 	handle->vm_graph = handle->map->map(handle->map->handle, VM__graph);
+	handle->vm_sourceFilter = handle->map->map(handle->map->handle, VM__sourceFilter);
+	handle->vm_destinationFilter = handle->map->map(handle->map->handle, VM__destinationFilter);
 
 	handle->filt.midi_Controller = handle->map->map(handle->map->handle, LV2_MIDI__Controller);
 	handle->filt.midi_Bender = handle->map->map(handle->map->handle, LV2_MIDI__Bender);

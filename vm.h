@@ -1004,26 +1004,26 @@ vm_filter_serialize(LV2_Atom_Forge *forge, const vm_filter_impl_t *impl,
 	LV2_Atom_Forge_Frame frame [2];
 	LV2_Atom_Forge_Ref ref = lv2_atom_forge_tuple(forge, &frame[0]);
 
-	for(unsigned i = 0; i < ITEMS_MAX; i++)
+	for(unsigned i = 0; i < CTRL_MAX; i++)
 	{
-		const vm_filter_t *filter = &filter[i];
+		const vm_filter_t *filter = &filters[i];
 
 		switch(filter->type)
 		{
 			case FILTER_CONTROLLER:
 			{
 				if(ref)
-					ref = lv2_atom_forge_object(forge, &frame[1], impl->midi_Controller, 0);
+					ref = lv2_atom_forge_object(forge, &frame[1], 0, impl->midi_Controller);
 
 				if(ref)
-					lv2_atom_forge_key(forge, impl->midi_channel);
+					ref = lv2_atom_forge_key(forge, impl->midi_channel);
 				if(ref)
-					lv2_atom_forge_int(forge, filter->channel);
+					ref = lv2_atom_forge_int(forge, filter->channel);
 
 				if(ref)
-					lv2_atom_forge_key(forge, impl->midi_controllerNumber);
+					ref = lv2_atom_forge_key(forge, impl->midi_controllerNumber);
 				if(ref)
-					lv2_atom_forge_int(forge, filter->value);
+					ref = lv2_atom_forge_int(forge, filter->value);
 
 				if(ref)
 					lv2_atom_forge_pop(forge, &frame[1]);
@@ -1031,12 +1031,12 @@ vm_filter_serialize(LV2_Atom_Forge *forge, const vm_filter_impl_t *impl,
 			case FILTER_BENDER:
 			{
 				if(ref)
-					ref = lv2_atom_forge_object(forge, &frame[1], impl->midi_Bender, 0);
+					ref = lv2_atom_forge_object(forge, &frame[1], 0, impl->midi_Bender);
 
 				if(ref)
-					lv2_atom_forge_key(forge, impl->midi_channel);
+					ref = lv2_atom_forge_key(forge, impl->midi_channel);
 				if(ref)
-					lv2_atom_forge_int(forge, filter->channel);
+					ref =lv2_atom_forge_int(forge, filter->channel);
 
 				if(ref)
 					lv2_atom_forge_pop(forge, &frame[1]);
