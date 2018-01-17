@@ -396,6 +396,19 @@ run_post(plughandle_t *handle, uint32_t frames)
 	}
 }
 
+static LV2_Atom_Forge_Ref
+send_chunk(LV2_Atom_Forge *forge, uint32_t frames, LV2_URID type,
+	const uint8_t *msg, uint32_t sz)
+{
+	LV2_Atom_Forge_Ref ref = lv2_atom_forge_frame_time(forge, frames);
+	if(ref)
+		ref = lv2_atom_forge_atom(forge, sz, type);
+	if(ref)
+		ref = lv2_atom_forge_write(forge, msg, sz);
+
+	return ref;
+}
+
 static void
 run_internal(plughandle_t *handle, uint32_t frames,
 	const float *in [CTRL_MAX], float *out [CTRL_MAX], forge_t forgs [CTRL_MAX])
@@ -971,19 +984,23 @@ loop: {
 				}
 				else if(handle->vm_plug == VM_PLUG_MIDI)
 				{
-					const uint8_t msg [3] = {
-						LV2_MIDI_MSG_CONTROLLER | 0x0, //FIXME
-						0x1, //FIXME
-						floor(out1 * 0x7f) //FIXME
-					};
+					const vm_filter_t *filter = &handle->destinationFilter[i];
 
-					// send changes on atom output ports
-					if(forgs[i].ref)
-						forgs[i].ref = lv2_atom_forge_frame_time(&forgs[i].forge, frames);
-					if(handle->ref)
-						forgs[i].ref = lv2_atom_forge_atom(&forgs[i].forge, sizeof(msg), handle->midi_MidiEvent);
-					if(handle->ref)
-						forgs[i].ref = lv2_atom_forge_write(&forgs[i].forge, &msg, sizeof(msg));
+					switch(filter->type)
+					{
+						case FILTER_CONTROLLER:
+						{
+							const uint8_t msg [3] = {
+								[0] = LV2_MIDI_MSG_CONTROLLER | filter->channel,
+								[1] = filter->value,
+								[2] = floor(out1 * 0x7f)
+							};
+
+							if(forgs[i].ref)
+								forgs[i].ref = send_chunk(&forgs[i].forge, frames, handle->midi_MidiEvent, msg, sizeof(msg));
+						} break;
+						//FIXME handle more types
+					}
 				}
 			}
 
