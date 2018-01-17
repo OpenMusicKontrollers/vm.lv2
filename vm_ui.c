@@ -514,7 +514,8 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 				nk_layout_row_dynamic(ctx, dy, 2);
 				if(  (handle->vm_plug == VM_PLUG_CONTROL)
 					|| (handle->vm_plug == VM_PLUG_CV)
-					|| (handle->vm_plug == VM_PLUG_ATOM) )
+					|| (handle->vm_plug == VM_PLUG_ATOM)
+					|| (handle->vm_plug == VM_PLUG_MIDI) )
 				{
 					if(i == 0) // calculate only once
 					{
@@ -524,6 +525,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 					const float old_val = handle->in0[i];
 					_wheel_float(ctx, &handle->in0[i], stp);
 					nk_property_float(ctx, input_labels[i], VM_MIN, &handle->in0[i], VM_MAX, stp, fpp);
+
 					if(old_val != handle->in0[i])
 					{
 						if(handle->vm_plug == VM_PLUG_ATOM)
@@ -538,6 +540,10 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 
 							handle->writer(handle->controller, i + 2,
 								lv2_atom_total_size(&flt.atom), handle->atom_eventTransfer, &flt);
+						}
+						else if(handle->vm_plug == VM_PLUG_ATOM)
+						{
+							//FIXME send MIDI to DSP
 						}
 						else // CONTROL, CV
 						{
@@ -792,7 +798,8 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 				nk_layout_row_dynamic(ctx, dy, 2);
 				if(  (handle->vm_plug == VM_PLUG_CONTROL)
 					|| (handle->vm_plug == VM_PLUG_CV)
-					|| (handle->vm_plug == VM_PLUG_ATOM) )
+					|| (handle->vm_plug == VM_PLUG_ATOM)
+					|| (handle->vm_plug == VM_PLUG_MIDI) )
 				{
 					nk_labelf(ctx, NK_TEXT_LEFT, "Out %u: %+f", i, handle->out0[i]);
 				}
