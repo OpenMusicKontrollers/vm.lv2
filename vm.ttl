@@ -1145,14 +1145,14 @@ vm:midi
 		vm:destinationFilter [
 			a atom:Tuple ;
 			rdf:value (
-				[ a midi:Controller ; midi:channel 0 ; midi:controllerNumber 1 ]
-				[ a midi:Controller ; midi:channel 1 ; midi:controllerNumber 1 ]
-				[ a midi:Controller ; midi:channel 2 ; midi:controllerNumber 1 ]
-				[ a midi:Controller ; midi:channel 3 ; midi:controllerNumber 1 ]
-				[ a midi:Controller ; midi:channel 4 ; midi:controllerNumber 1 ]
-				[ a midi:Controller ; midi:channel 5 ; midi:controllerNumber 1 ]
-				[ a midi:Controller ; midi:channel 6 ; midi:controllerNumber 1 ]
-				[ a midi:Controller ; midi:channel 7 ; midi:controllerNumber 1 ]
+				[ a midi:Bender     ; midi:channel 0 ]
+				[ a midi:Bender     ; midi:channel 1 ]
+				[ a midi:Bender     ; midi:channel 2 ]
+				[ a midi:Bender     ; midi:channel 3 ]
+				[ a midi:Bender     ; midi:channel 4 ]
+				[ a midi:Bender     ; midi:channel 5 ]
+				[ a midi:Bender     ; midi:channel 6 ]
+				[ a midi:Bender     ; midi:channel 7 ]
 			)
 		]
 	] .

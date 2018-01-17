@@ -186,6 +186,7 @@ enum _vm_command_enum_t {
 
 enum _vm_filter_enum_t {
 	FILTER_CONTROLLER = 0,
+	FILTER_BENDER,
 };
 
 struct _vm_command_t {
@@ -219,6 +220,7 @@ struct _vm_filter_t {
 
 struct _vm_filter_impl_t {
 	LV2_URID midi_Controller;
+	LV2_URID midi_Bender;
 	LV2_URID midi_channel;
 	LV2_URID midi_controllerNumber;
 };
@@ -1026,6 +1028,19 @@ vm_filter_serialize(LV2_Atom_Forge *forge, const vm_filter_impl_t *impl,
 				if(ref)
 					lv2_atom_forge_pop(forge, &frame[1]);
 			} break;
+			case FILTER_BENDER:
+			{
+				if(ref)
+					ref = lv2_atom_forge_object(forge, &frame[1], impl->midi_Bender, 0);
+
+				if(ref)
+					lv2_atom_forge_key(forge, impl->midi_channel);
+				if(ref)
+					lv2_atom_forge_int(forge, filter->channel);
+
+				if(ref)
+					lv2_atom_forge_pop(forge, &frame[1]);
+			} break;
 			//FIXME handle more types
 		}
 	}
@@ -1068,6 +1083,19 @@ vm_filter_deserialize(LV2_Atom_Forge *forge, const vm_filter_impl_t *impl,
 
 				if(value && (value->atom.type == forge->Int) )
 					filter->value = value->body;
+			}
+			else if(obj->body.otype == impl->midi_Bender)
+			{
+				const LV2_Atom_Int *channel = NULL;
+
+				lv2_atom_object_get(obj,
+					impl->midi_channel, &channel,
+					0);
+
+				filter->type = FILTER_BENDER;
+
+				if(channel && (channel->atom.type == forge->Int) )
+					filter->channel = channel->body;
 			}
 			//FIXME handle more types
 		}

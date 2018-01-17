@@ -278,6 +278,7 @@ instantiate(const LV2_Descriptor* descriptor, num_t rate,
 	handle->midi_MidiEvent = handle->map->map(handle->map->handle, LV2_MIDI__MidiEvent);
 
 	handle->filt.midi_Controller = handle->map->map(handle->map->handle, LV2_MIDI__Controller);
+	handle->filt.midi_Bender = handle->map->map(handle->map->handle, LV2_MIDI__Bender);
 	handle->filt.midi_channel = handle->map->map(handle->map->handle, LV2_MIDI__channel);
 	handle->filt.midi_controllerNumber = handle->map->map(handle->map->handle, LV2_MIDI__controllerNumber);
 
@@ -990,10 +991,23 @@ loop: {
 					{
 						case FILTER_CONTROLLER:
 						{
+							const uint8_t value = floor(out1 * 0x7f);
 							const uint8_t msg [3] = {
 								[0] = LV2_MIDI_MSG_CONTROLLER | filter->channel,
 								[1] = filter->value,
-								[2] = floor(out1 * 0x7f)
+								[2] = value
+							};
+
+							if(forgs[i].ref)
+								forgs[i].ref = send_chunk(&forgs[i].forge, frames, handle->midi_MidiEvent, msg, sizeof(msg));
+						} break;
+						case FILTER_BENDER:
+						{
+							const int16_t value = floor(out1*0x2000 + 0x1fff);
+							const uint8_t msg [3] = {
+								[0] = LV2_MIDI_MSG_BENDER | filter->channel,
+								[1] = value & 0x7f,
+								[2] = value >> 7
 							};
 
 							if(forgs[i].ref)
@@ -1364,7 +1378,18 @@ filter_midi(plughandle_t *handle, vm_filter_t *filter, const uint8_t *msg, float
 			if(  (msg[0] == (LV2_MIDI_MSG_CONTROLLER | filter->channel) )
 				&& (msg[1] == filter->value) )
 			{
-				*f32 = msg[2] / 127.f;
+				const uint8_t value = msg[2];
+				*f32 = (float)value / 127.f;
+
+				return true;
+			}
+		} break;
+		case FILTER_BENDER:
+		{
+			if(msg[0] == (LV2_MIDI_MSG_BENDER | filter->channel) )
+			{
+				const int64_t value = msg[2] | (msg[1] << 7);
+				*f32 = (float)(value - 0x1fff) / 0x2000;
 
 				return true;
 			}
