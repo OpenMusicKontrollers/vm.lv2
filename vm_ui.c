@@ -84,6 +84,9 @@ struct _plughandle_t {
 
 	atom_ser_t ser;
 	vm_api_impl_t api [OP_MAX];
+	vm_filter_t sourceFilter [CTRL_MAX];
+	vm_filter_t destinationFilter [CTRL_MAX];
+	vm_filter_impl_t filt;
 
 	float in0 [CTRL_MAX];
 	float out0 [CTRL_MAX];
@@ -146,6 +149,10 @@ _intercept_sourceFilter(void *data, int64_t frames, props_impl_t *impl)
 	plughandle_t *handle = data;
 
 	handle->sourceFilter_size = impl->value.size;
+
+	const int status = vm_filter_deserialize(&handle->forge, &handle->filt,
+		handle->sourceFilter, impl->value.size, impl->value.body);
+	(void)status; //FIXME
 }
 
 static void
@@ -154,6 +161,10 @@ _intercept_destinationFilter(void *data, int64_t frames, props_impl_t *impl)
 	plughandle_t *handle = data;
 
 	handle->destinationFilter_size = impl->value.size;
+
+	const int status = vm_filter_deserialize(&handle->forge, &handle->filt,
+		handle->destinationFilter, impl->value.size, impl->value.body);
+	(void)status; //FIXME
 }
 
 static const props_def_t defs [MAX_NPROPS] = {
@@ -891,6 +902,11 @@ instantiate(const LV2UI_Descriptor *descriptor, const char *plugin_uri,
 
 	handle->atom_eventTransfer = handle->map->map(handle->map->handle, LV2_ATOM__eventTransfer);
 	handle->vm_graph = handle->map->map(handle->map->handle, VM__graph);
+
+	handle->filt.midi_Controller = handle->map->map(handle->map->handle, LV2_MIDI__Controller);
+	handle->filt.midi_Bender = handle->map->map(handle->map->handle, LV2_MIDI__Bender);
+	handle->filt.midi_channel = handle->map->map(handle->map->handle, LV2_MIDI__channel);
+	handle->filt.midi_controllerNumber = handle->map->map(handle->map->handle, LV2_MIDI__controllerNumber);
 
 	handle->controller = controller;
 	handle->writer = write_function;
