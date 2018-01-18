@@ -282,9 +282,11 @@ instantiate(const LV2_Descriptor* descriptor, num_t rate,
 	handle->filt.midi_ProgramChange = handle->map->map(handle->map->handle, LV2_MIDI__ProgramChange);
 	handle->filt.midi_ChannelPressure = handle->map->map(handle->map->handle, LV2_MIDI__ChannelPressure);
 	handle->filt.midi_NotePressure = handle->map->map(handle->map->handle, LV2_MIDI__Aftertouch);
+	handle->filt.midi_NoteOn = handle->map->map(handle->map->handle, LV2_MIDI__NoteOn);
 	handle->filt.midi_channel = handle->map->map(handle->map->handle, LV2_MIDI__channel);
 	handle->filt.midi_controllerNumber = handle->map->map(handle->map->handle, LV2_MIDI__controllerNumber);
 	handle->filt.midi_noteNumber = handle->map->map(handle->map->handle, LV2_MIDI__noteNumber);
+	handle->filt.midi_velocity = handle->map->map(handle->map->handle, LV2_MIDI__velocity);
 
 	lv2_atom_forge_init(&handle->forge, handle->map);
 	for(unsigned i = 0; i < CTRL_MAX; i++)
@@ -975,8 +977,6 @@ loop: {
 
 		if(*out[i] != out1)
 		{
-			*out[i] = out1;
-
 			if(forgs)
 			{
 				if(handle->vm_plug == VM_PLUG_ATOM)
@@ -1039,6 +1039,26 @@ loop: {
 							if(forgs[i].ref)
 								forgs[i].ref = send_chunk(&forgs[i].forge, frames, handle->midi_MidiEvent, msg, sizeof(msg));
 						} break;
+						case FILTER_NOTE_ON:
+						{
+							const uint8_t value1 = floor(*out[i]* 0x7f);
+							const uint8_t value2 = floor(out1 * 0x7f);
+							const uint8_t msg1 [3] = {
+								[0] = LV2_MIDI_MSG_NOTE_OFF | filter->channel,
+								[1] = value1,
+								[2] = 0x0
+							};
+							const uint8_t msg2 [3] = {
+								[0] = LV2_MIDI_MSG_NOTE_ON | filter->channel,
+								[1] = value2,
+								[2] = filter->value
+							};
+
+							if(forgs[i].ref)
+								forgs[i].ref = send_chunk(&forgs[i].forge, frames, handle->midi_MidiEvent, msg1, sizeof(msg1));
+							if(forgs[i].ref)
+								forgs[i].ref = send_chunk(&forgs[i].forge, frames, handle->midi_MidiEvent, msg2, sizeof(msg2));
+						} break;
 						case FILTER_NOTE_PRESSURE:
 						{
 							const uint8_t value = floor(out1 * 0x7f);
@@ -1060,6 +1080,8 @@ loop: {
 					}
 				}
 			}
+
+			*out[i] = out1;
 
 			if(out1 != handle->outm[i])
 			{
@@ -1457,9 +1479,19 @@ filter_midi(plughandle_t *handle, vm_filter_t *filter, const uint8_t *msg, float
 				return true;
 			}
 		} break;
+		case FILTER_NOTE_ON:
+		{
+			if(msg[0] == (LV2_MIDI_MSG_NOTE_ON | filter->channel) )
+			{
+				const uint8_t value = msg[1];
+				*f32 = (float)value / 0x7f;
+
+				return true;
+			}
+		} break;
 		case FILTER_NOTE_PRESSURE:
 		{
-			if(  (msg[0] == (LV2_MIDI_MSG_NOTE_PRESSURE| filter->channel) )
+			if(  (msg[0] == (LV2_MIDI_MSG_NOTE_PRESSURE | filter->channel) )
 				&& (msg[1] == filter->value) )
 			{
 				const uint8_t value = msg[2];

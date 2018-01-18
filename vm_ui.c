@@ -608,6 +608,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 						case FILTER_BENDER:
 						case FILTER_PROGRAM_CHANGE:
 						case FILTER_CHANNEL_PRESSURE:
+						case FILTER_NOTE_ON:
 						case FILTER_MAX:
 						{
 							// nothing
@@ -904,6 +905,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 					switch(filter->type)
 					{
 						case FILTER_CONTROLLER:
+						case FILTER_NOTE_ON:
 						case FILTER_NOTE_PRESSURE:
 						{
 							const int old_value = filter->value;
@@ -1033,9 +1035,11 @@ instantiate(const LV2UI_Descriptor *descriptor, const char *plugin_uri,
 	handle->filt.midi_ProgramChange = handle->map->map(handle->map->handle, LV2_MIDI__ProgramChange);
 	handle->filt.midi_ChannelPressure = handle->map->map(handle->map->handle, LV2_MIDI__ChannelPressure);
 	handle->filt.midi_NotePressure = handle->map->map(handle->map->handle, LV2_MIDI__Aftertouch);
+	handle->filt.midi_NoteOn = handle->map->map(handle->map->handle, LV2_MIDI__NoteOn);
 	handle->filt.midi_channel = handle->map->map(handle->map->handle, LV2_MIDI__channel);
 	handle->filt.midi_controllerNumber = handle->map->map(handle->map->handle, LV2_MIDI__controllerNumber);
 	handle->filt.midi_noteNumber = handle->map->map(handle->map->handle, LV2_MIDI__noteNumber);
+	handle->filt.midi_velocity = handle->map->map(handle->map->handle, LV2_MIDI__velocity);
 
 	handle->controller = controller;
 	handle->writer = write_function;

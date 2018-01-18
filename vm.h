@@ -189,6 +189,7 @@ enum _vm_filter_enum_t {
 	FILTER_BENDER,
 	FILTER_PROGRAM_CHANGE,
 	FILTER_CHANNEL_PRESSURE,
+	FILTER_NOTE_ON,
 	FILTER_NOTE_PRESSURE,
 
 	FILTER_MAX,
@@ -229,9 +230,11 @@ struct _vm_filter_impl_t {
 	LV2_URID midi_ProgramChange;
 	LV2_URID midi_ChannelPressure;
 	LV2_URID midi_NotePressure;
+	LV2_URID midi_NoteOn;
 	LV2_URID midi_channel;
 	LV2_URID midi_controllerNumber;
 	LV2_URID midi_noteNumber;
+	LV2_URID midi_velocity;
 };
 
 struct _plugstate_t {
@@ -253,6 +256,7 @@ static const char *filter_labels [FILTER_MAX] = {
 	[FILTER_BENDER]           = "Bender",
 	[FILTER_PROGRAM_CHANGE]   = "Program Change",
 	[FILTER_CHANNEL_PRESSURE] = "Channel Pressure",
+	[FILTER_NOTE_ON]          = "Note On",
 	[FILTER_NOTE_PRESSURE]    = "Note Pressure",
 };
 
@@ -1084,6 +1088,24 @@ vm_filter_serialize(LV2_Atom_Forge *forge, const vm_filter_impl_t *impl,
 				if(ref)
 					lv2_atom_forge_pop(forge, &frame[1]);
 			} break;
+			case FILTER_NOTE_ON:
+			{
+				if(ref)
+					ref = lv2_atom_forge_object(forge, &frame[1], 0, impl->midi_NoteOn);
+
+				if(ref)
+					ref = lv2_atom_forge_key(forge, impl->midi_channel);
+				if(ref)
+					ref =lv2_atom_forge_int(forge, filter->channel);
+
+				if(ref)
+					ref = lv2_atom_forge_key(forge, impl->midi_velocity);
+				if(ref)
+					ref =lv2_atom_forge_int(forge, filter->value);
+
+				if(ref)
+					lv2_atom_forge_pop(forge, &frame[1]);
+			} break;
 			case FILTER_NOTE_PRESSURE:
 			{
 				if(ref)
@@ -1188,6 +1210,24 @@ vm_filter_deserialize(LV2_Atom_Forge *forge, const vm_filter_impl_t *impl,
 
 				if(channel && (channel->atom.type == forge->Int) )
 					filter->channel = channel->body;
+			}
+			else if(obj->body.otype == impl->midi_NoteOn)
+			{
+				const LV2_Atom_Int *channel = NULL;
+				const LV2_Atom_Int *value = NULL;
+
+				lv2_atom_object_get(obj,
+					impl->midi_channel, &channel,
+					impl->midi_velocity, &value,
+					0);
+
+				filter->type = FILTER_NOTE_ON;
+
+				if(channel && (channel->atom.type == forge->Int) )
+					filter->channel = channel->body;
+
+				if(value && (value->atom.type == forge->Int) )
+					filter->value = value->body;
 			}
 			else if(obj->body.otype == impl->midi_NotePressure)
 			{
