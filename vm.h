@@ -188,6 +188,7 @@ enum _vm_filter_enum_t {
 	FILTER_CONTROLLER = 0,
 	FILTER_BENDER,
 	FILTER_CHANNEL_PRESSURE,
+	FILTER_NOTE_PRESSURE,
 
 	FILTER_MAX,
 };
@@ -225,8 +226,10 @@ struct _vm_filter_impl_t {
 	LV2_URID midi_Controller;
 	LV2_URID midi_Bender;
 	LV2_URID midi_ChannelPressure;
+	LV2_URID midi_NotePressure;
 	LV2_URID midi_channel;
 	LV2_URID midi_controllerNumber;
+	LV2_URID midi_noteNumber;
 };
 
 struct _plugstate_t {
@@ -247,6 +250,7 @@ static const char *filter_labels [FILTER_MAX] = {
 	[FILTER_CONTROLLER]       = "Controller",
 	[FILTER_BENDER]           = "Bender",
 	[FILTER_CHANNEL_PRESSURE] = "Channel Pressure",
+	[FILTER_NOTE_PRESSURE]    = "Note Pressure",
 };
 
 static const vm_api_def_t vm_api_def [OP_MAX] = {
@@ -1064,6 +1068,24 @@ vm_filter_serialize(LV2_Atom_Forge *forge, const vm_filter_impl_t *impl,
 				if(ref)
 					lv2_atom_forge_pop(forge, &frame[1]);
 			} break;
+			case FILTER_NOTE_PRESSURE:
+			{
+				if(ref)
+					ref = lv2_atom_forge_object(forge, &frame[1], 0, impl->midi_NotePressure);
+
+				if(ref)
+					ref = lv2_atom_forge_key(forge, impl->midi_channel);
+				if(ref)
+					ref =lv2_atom_forge_int(forge, filter->channel);
+
+				if(ref)
+					ref = lv2_atom_forge_key(forge, impl->midi_noteNumber);
+				if(ref)
+					ref =lv2_atom_forge_int(forge, filter->value);
+
+				if(ref)
+					lv2_atom_forge_pop(forge, &frame[1]);
+			} break;
 			//FIXME handle more types
 
 			case FILTER_MAX:
@@ -1137,6 +1159,24 @@ vm_filter_deserialize(LV2_Atom_Forge *forge, const vm_filter_impl_t *impl,
 
 				if(channel && (channel->atom.type == forge->Int) )
 					filter->channel = channel->body;
+			}
+			else if(obj->body.otype == impl->midi_NotePressure)
+			{
+				const LV2_Atom_Int *channel = NULL;
+				const LV2_Atom_Int *value = NULL;
+
+				lv2_atom_object_get(obj,
+					impl->midi_channel, &channel,
+					impl->midi_noteNumber, &value,
+					0);
+
+				filter->type = FILTER_NOTE_PRESSURE;
+
+				if(channel && (channel->atom.type == forge->Int) )
+					filter->channel = channel->body;
+
+				if(value && (value->atom.type == forge->Int) )
+					filter->value = value->body;
 			}
 			//FIXME handle more types
 		}
