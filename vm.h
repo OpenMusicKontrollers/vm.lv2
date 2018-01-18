@@ -187,6 +187,8 @@ enum _vm_command_enum_t {
 enum _vm_filter_enum_t {
 	FILTER_CONTROLLER = 0,
 	FILTER_BENDER,
+
+	FILTER_MAX,
 };
 
 struct _vm_command_t {
@@ -237,6 +239,11 @@ static const char *command_labels [COMMAND_MAX] = {
 	[COMMAND_BOOL]     = "Boolean",
 	[COMMAND_INT]      = "Integer",
 	[COMMAND_FLOAT]    = "Float",
+};
+
+static const char *filter_labels [FILTER_MAX] = {
+	[FILTER_CONTROLLER] = "Controller",
+	[FILTER_BENDER]     = "Bender",
 };
 
 static const vm_api_def_t vm_api_def [OP_MAX] = {
@@ -1042,6 +1049,11 @@ vm_filter_serialize(LV2_Atom_Forge *forge, const vm_filter_impl_t *impl,
 					lv2_atom_forge_pop(forge, &frame[1]);
 			} break;
 			//FIXME handle more types
+
+			case FILTER_MAX:
+			{
+				// nothing
+			}	break;
 		}
 	}
 

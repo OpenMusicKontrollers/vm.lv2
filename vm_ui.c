@@ -133,8 +133,8 @@ static const struct nk_color plot_fg2_color = {
 
 static const char *ms_label = "#ms:";
 static const char *nil_label = "#";
-static const char *chn_label = "#chn";
-static const char *val_label = "#val";
+static const char *chn_label = "#chn:";
+static const char *val_label = "#val:";
 
 static void
 _intercept_graph(void *data, int64_t frames, props_impl_t *impl)
@@ -578,15 +578,38 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 				{
 					vm_filter_t *filter = &handle->sourceFilter[i];
 
+					nk_layout_row_dynamic(ctx, dy, 3);
+
+					int filter_type = filter->type;
+					nk_combobox(ctx, filter_labels, FILTER_MAX, &filter_type,
+						dy, nk_vec2(nk_widget_width(ctx), dy*14)); //FIXME
+					if(filter->type != filter_type)
+					{
+						filter->type = filter_type;
+						sync = true;
+					}
+
 					const int old_channel = filter->channel;
 					filter->channel = nk_propertyi(ctx, chn_label, 0x0, old_channel, 0x7, 1, 1.f);
 					if(old_channel != filter->channel)
 						sync = true;
 
-					const int old_value = filter->value;
-					filter->value = nk_propertyi(ctx, val_label, 0x0, old_value, 0x7f, 1, 1.f);
-					if(old_value != filter->value)
-						sync = true;
+					switch(filter->type)
+					{
+						case FILTER_CONTROLLER:
+						{
+							const int old_value = filter->value;
+							filter->value = nk_propertyi(ctx, val_label, 0x0, old_value, 0x7f, 1, 1.f);
+							if(old_value != filter->value)
+								sync = true;
+						} break;
+
+						case FILTER_BENDER:
+						case FILTER_MAX:
+						{
+							// nothing
+						} break;
+					}
 				}
 			}
 
@@ -859,15 +882,38 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 				{
 					vm_filter_t *filter = &handle->destinationFilter[i];
 
+					nk_layout_row_dynamic(ctx, dy, 3);
+
+					int filter_type = filter->type;
+					nk_combobox(ctx, filter_labels, FILTER_MAX, &filter_type,
+						dy, nk_vec2(nk_widget_width(ctx), dy*14)); //FIXME
+					if(filter->type != filter_type)
+					{
+						filter->type = filter_type;
+						sync = true;
+					}
+
 					const int old_channel = filter->channel;
 					filter->channel = nk_propertyi(ctx, chn_label, 0x0, old_channel, 0x7, 1, 1.f);
 					if(old_channel != filter->channel)
 						sync = true;
 
-					const int old_value = filter->value;
-					filter->value = nk_propertyi(ctx, val_label, 0x0, old_value, 0x7f, 1, 1.f);
-					if(old_value != filter->value)
-						sync = true;
+					switch(filter->type)
+					{
+						case FILTER_CONTROLLER:
+						{
+							const int old_value = filter->value;
+							filter->value = nk_propertyi(ctx, val_label, 0x0, old_value, 0x7f, 1, 1.f);
+							if(old_value != filter->value)
+								sync = true;
+						} break;
+
+						case FILTER_BENDER:
+						case FILTER_MAX:
+						{
+							// nothing
+						} break;
+					}
 				}
 			}
 

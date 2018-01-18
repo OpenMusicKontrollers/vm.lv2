@@ -1014,6 +1014,11 @@ loop: {
 								forgs[i].ref = send_chunk(&forgs[i].forge, frames, handle->midi_MidiEvent, msg, sizeof(msg));
 						} break;
 						//FIXME handle more types
+
+						case FILTER_MAX:
+						{
+							// nothing
+						}	break;
 					}
 				}
 			}
@@ -1395,6 +1400,11 @@ filter_midi(plughandle_t *handle, vm_filter_t *filter, const uint8_t *msg, float
 			}
 		} break;
 		//FIXME handle more filter types
+
+		case FILTER_MAX:
+		{
+			// nothing
+		}	break;
 	}
 
 	return false;
