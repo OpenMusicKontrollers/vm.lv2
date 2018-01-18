@@ -187,6 +187,7 @@ enum _vm_command_enum_t {
 enum _vm_filter_enum_t {
 	FILTER_CONTROLLER = 0,
 	FILTER_BENDER,
+	FILTER_PROGRAM_CHANGE,
 	FILTER_CHANNEL_PRESSURE,
 	FILTER_NOTE_PRESSURE,
 
@@ -225,6 +226,7 @@ struct _vm_filter_t {
 struct _vm_filter_impl_t {
 	LV2_URID midi_Controller;
 	LV2_URID midi_Bender;
+	LV2_URID midi_ProgramChange;
 	LV2_URID midi_ChannelPressure;
 	LV2_URID midi_NotePressure;
 	LV2_URID midi_channel;
@@ -249,6 +251,7 @@ static const char *command_labels [COMMAND_MAX] = {
 static const char *filter_labels [FILTER_MAX] = {
 	[FILTER_CONTROLLER]       = "Controller",
 	[FILTER_BENDER]           = "Bender",
+	[FILTER_PROGRAM_CHANGE]   = "Program Change",
 	[FILTER_CHANNEL_PRESSURE] = "Channel Pressure",
 	[FILTER_NOTE_PRESSURE]    = "Note Pressure",
 };
@@ -1055,6 +1058,19 @@ vm_filter_serialize(LV2_Atom_Forge *forge, const vm_filter_impl_t *impl,
 				if(ref)
 					lv2_atom_forge_pop(forge, &frame[1]);
 			} break;
+			case FILTER_PROGRAM_CHANGE:
+			{
+				if(ref)
+					ref = lv2_atom_forge_object(forge, &frame[1], 0, impl->midi_ProgramChange);
+
+				if(ref)
+					ref = lv2_atom_forge_key(forge, impl->midi_channel);
+				if(ref)
+					ref =lv2_atom_forge_int(forge, filter->channel);
+
+				if(ref)
+					lv2_atom_forge_pop(forge, &frame[1]);
+			} break;
 			case FILTER_CHANNEL_PRESSURE:
 			{
 				if(ref)
@@ -1143,6 +1159,19 @@ vm_filter_deserialize(LV2_Atom_Forge *forge, const vm_filter_impl_t *impl,
 					0);
 
 				filter->type = FILTER_BENDER;
+
+				if(channel && (channel->atom.type == forge->Int) )
+					filter->channel = channel->body;
+			}
+			else if(obj->body.otype == impl->midi_ProgramChange)
+			{
+				const LV2_Atom_Int *channel = NULL;
+
+				lv2_atom_object_get(obj,
+					impl->midi_channel, &channel,
+					0);
+
+				filter->type = FILTER_PROGRAM_CHANGE;
 
 				if(channel && (channel->atom.type == forge->Int) )
 					filter->channel = channel->body;

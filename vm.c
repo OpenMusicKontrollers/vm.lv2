@@ -279,6 +279,7 @@ instantiate(const LV2_Descriptor* descriptor, num_t rate,
 
 	handle->filt.midi_Controller = handle->map->map(handle->map->handle, LV2_MIDI__Controller);
 	handle->filt.midi_Bender = handle->map->map(handle->map->handle, LV2_MIDI__Bender);
+	handle->filt.midi_ProgramChange = handle->map->map(handle->map->handle, LV2_MIDI__ProgramChange);
 	handle->filt.midi_ChannelPressure = handle->map->map(handle->map->handle, LV2_MIDI__ChannelPressure);
 	handle->filt.midi_NotePressure = handle->map->map(handle->map->handle, LV2_MIDI__Aftertouch);
 	handle->filt.midi_channel = handle->map->map(handle->map->handle, LV2_MIDI__channel);
@@ -1016,6 +1017,17 @@ loop: {
 							if(forgs[i].ref)
 								forgs[i].ref = send_chunk(&forgs[i].forge, frames, handle->midi_MidiEvent, msg, sizeof(msg));
 						} break;
+						case FILTER_PROGRAM_CHANGE:
+						{
+							const uint8_t value = floor(out1 * 0x7f);
+							const uint8_t msg [2] = {
+								[0] = LV2_MIDI_MSG_PGM_CHANGE | filter->channel,
+								[1] = value
+							};
+
+							if(forgs[i].ref)
+								forgs[i].ref = send_chunk(&forgs[i].forge, frames, handle->midi_MidiEvent, msg, sizeof(msg));
+						} break;
 						case FILTER_CHANNEL_PRESSURE:
 						{
 							const uint8_t value = floor(out1 * 0x7f);
@@ -1425,9 +1437,19 @@ filter_midi(plughandle_t *handle, vm_filter_t *filter, const uint8_t *msg, float
 				return true;
 			}
 		} break;
+		case FILTER_PROGRAM_CHANGE:
+		{
+			if(msg[0] == (LV2_MIDI_MSG_PGM_CHANGE | filter->channel) )
+			{
+				const uint8_t value = msg[1];
+				*f32 = (float)value / 0x7f;
+
+				return true;
+			}
+		} break;
 		case FILTER_CHANNEL_PRESSURE:
 		{
-			if(msg[0] == (LV2_MIDI_MSG_CHANNEL_PRESSURE| filter->channel) )
+			if(msg[0] == (LV2_MIDI_MSG_CHANNEL_PRESSURE | filter->channel) )
 			{
 				const uint8_t value = msg[1];
 				*f32 = (float)value / 0x7f;
