@@ -34,9 +34,15 @@
 #define PLOT_MAX  256
 #define PLOT_MASK (PLOT_MAX - 1)
 
+typedef struct _lv2_atom_midi_t lv2_atom_midi_t;
 typedef struct _atom_ser_t atom_ser_t;
 typedef struct _plot_t plot_t;
 typedef struct _plughandle_t plughandle_t;
+
+struct _lv2_atom_midi_t {
+	LV2_Atom atom;
+	uint8_t body [3];
+};
 
 struct _atom_ser_t {
 	uint32_t size;
@@ -65,6 +71,7 @@ struct _plughandle_t {
 	LV2_URID vm_graph;
 	LV2_URID vm_sourceFilter;
 	LV2_URID vm_destinationFilter;
+	LV2_URID midi_MidiEvent;
 
 	LV2_Log_Log *log;
 	LV2_Log_Logger logger;
@@ -534,6 +541,8 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 
 					if(old_val != handle->in0[i])
 					{
+						const float out1 = handle->in0[i];
+
 						if(handle->vm_plug == VM_PLUG_ATOM)
 						{
 							const LV2_Atom_Float flt = {
@@ -541,20 +550,122 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 									.size = sizeof(float),
 									.type = handle->forge.Float
 								},
-								.body = handle->in0[i]
+								.body = out1
 							};
 
 							handle->writer(handle->controller, i + 2,
 								lv2_atom_total_size(&flt.atom), handle->atom_eventTransfer, &flt);
 						}
-						else if(handle->vm_plug == VM_PLUG_ATOM)
+						else if(handle->vm_plug == VM_PLUG_MIDI)
 						{
-							//FIXME send MIDI to DSP
+							vm_filter_t *filter = &handle->sourceFilter[i];
+
+							switch(filter->type)
+							{
+								case FILTER_CONTROLLER:
+								{
+									const uint8_t value = floor(out1 * 0x7f);
+									const lv2_atom_midi_t msg = {
+										.atom = {
+											.size = 3,
+											.type = handle->midi_MidiEvent
+										},
+										.body = {
+											[0] = LV2_MIDI_MSG_CONTROLLER | filter->channel,
+											[1] = filter->value,
+											[2] = value
+										}
+									};
+
+									handle->writer(handle->controller, i + 2,
+										lv2_atom_total_size(&msg.atom), handle->atom_eventTransfer, &msg);
+								} break;
+								case FILTER_BENDER:
+								{
+									const int16_t value = floor(out1*0x2000 + 0x1fff);
+									const lv2_atom_midi_t msg = {
+										.atom = {
+											.size = 3,
+											.type = handle->midi_MidiEvent
+										},
+										.body = {
+											[0] = LV2_MIDI_MSG_BENDER | filter->channel,
+											[1] = value & 0x7f,
+											[2] = value >> 7
+										}
+									};
+
+									handle->writer(handle->controller, i + 2,
+										lv2_atom_total_size(&msg.atom), handle->atom_eventTransfer, &msg);
+								} break;
+								case FILTER_PROGRAM_CHANGE:
+								{
+									const uint8_t value = floor(out1 * 0x7f);
+									const lv2_atom_midi_t msg = {
+										.atom = {
+											.size = 2,
+											.type = handle->midi_MidiEvent
+										},
+										.body = {
+											[0] = LV2_MIDI_MSG_PGM_CHANGE | filter->channel,
+											[1] = value
+										}
+									};
+
+									handle->writer(handle->controller, i + 2,
+										lv2_atom_total_size(&msg.atom), handle->atom_eventTransfer, &msg);
+								} break;
+								case FILTER_CHANNEL_PRESSURE:
+								{
+									const uint8_t value = floor(out1 * 0x7f);
+									const lv2_atom_midi_t msg = {
+										.atom = {
+											.size = 2,
+											.type = handle->midi_MidiEvent
+										},
+										.body = {
+											[0] = LV2_MIDI_MSG_CHANNEL_PRESSURE | filter->channel,
+											[1] = value
+										}
+									};
+
+									handle->writer(handle->controller, i + 2,
+										lv2_atom_total_size(&msg.atom), handle->atom_eventTransfer, &msg);
+								} break;
+								case FILTER_NOTE_ON:
+								{
+									//FIXME send
+								} break;
+								case FILTER_NOTE_PRESSURE:
+								{
+									const uint8_t value = floor(out1 * 0x7f);
+									const lv2_atom_midi_t msg = {
+										.atom = {
+											.size = 3,
+											.type = handle->midi_MidiEvent
+										},
+										.body = {
+											[0] = LV2_MIDI_MSG_NOTE_PRESSURE | filter->channel,
+											[1] = filter->value,
+											[2] = value
+										}
+									};
+
+									handle->writer(handle->controller, i + 2,
+										lv2_atom_total_size(&msg.atom), handle->atom_eventTransfer, &msg);
+								} break;
+								//FIXME handle more types
+
+								case FILTER_MAX:
+								{
+									// nothing
+								}	break;
+							}
 						}
 						else // CONTROL, CV
 						{
 							handle->writer(handle->controller, i + 2,
-								sizeof(float), 0, &handle->in0[i]);
+								sizeof(float), 0, &out1);
 						}
 					}
 				}
@@ -1029,6 +1140,7 @@ instantiate(const LV2UI_Descriptor *descriptor, const char *plugin_uri,
 	handle->vm_graph = handle->map->map(handle->map->handle, VM__graph);
 	handle->vm_sourceFilter = handle->map->map(handle->map->handle, VM__sourceFilter);
 	handle->vm_destinationFilter = handle->map->map(handle->map->handle, VM__destinationFilter);
+	handle->midi_MidiEvent = handle->map->map(handle->map->handle, LV2_MIDI__MidiEvent);
 
 	handle->filt.midi_Controller = handle->map->map(handle->map->handle, LV2_MIDI__Controller);
 	handle->filt.midi_Bender = handle->map->map(handle->map->handle, LV2_MIDI__Bender);
