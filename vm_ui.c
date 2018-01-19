@@ -634,7 +634,21 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 								} break;
 								case FILTER_NOTE_ON:
 								{
-									//FIXME send
+									const uint8_t value = floor(out1 * 0x7f);
+									const lv2_atom_midi_t msg = {
+										.atom = {
+											.size = 3,
+											.type = handle->midi_MidiEvent
+										},
+										.body = {
+											[0] = LV2_MIDI_MSG_NOTE_ON | filter->channel,
+											[1] = value,
+											[2] = filter->value
+										}
+									};
+
+									handle->writer(handle->controller, i + 2,
+										lv2_atom_total_size(&msg.atom), handle->atom_eventTransfer, &msg);
 								} break;
 								case FILTER_NOTE_PRESSURE:
 								{

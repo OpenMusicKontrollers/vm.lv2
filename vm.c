@@ -1041,23 +1041,30 @@ loop: {
 						} break;
 						case FILTER_NOTE_ON:
 						{
-							const uint8_t value1 = floor(*out[i]* 0x7f);
-							const uint8_t value2 = floor(out1 * 0x7f);
-							const uint8_t msg1 [3] = {
-								[0] = LV2_MIDI_MSG_NOTE_OFF | filter->channel,
-								[1] = value1,
-								[2] = 0x0
-							};
-							const uint8_t msg2 [3] = {
-								[0] = LV2_MIDI_MSG_NOTE_ON | filter->channel,
-								[1] = value2,
-								[2] = filter->value
-							};
+							if(floor(*out[i] * 0x7f) > 0x0)
+							{
+								const uint8_t value = floor(*out[i] * 0x7f);
+								const uint8_t msg [3] = {
+									[0] = LV2_MIDI_MSG_NOTE_OFF | filter->channel,
+									[1] = value,
+									[2] = 0x0
+								};
 
-							if(forgs[i].ref)
-								forgs[i].ref = send_chunk(&forgs[i].forge, frames, handle->midi_MidiEvent, msg1, sizeof(msg1));
-							if(forgs[i].ref)
-								forgs[i].ref = send_chunk(&forgs[i].forge, frames, handle->midi_MidiEvent, msg2, sizeof(msg2));
+								if(forgs[i].ref)
+									forgs[i].ref = send_chunk(&forgs[i].forge, frames, handle->midi_MidiEvent, msg, sizeof(msg));
+							}
+							if(floor(out1 * 0x7f) > 0x0)
+							{
+								const uint8_t value = floor(out1 * 0x7f);
+								const uint8_t msg [3] = {
+									[0] = LV2_MIDI_MSG_NOTE_ON | filter->channel,
+									[1] = value,
+									[2] = filter->value
+								};
+
+								if(forgs[i].ref)
+									forgs[i].ref = send_chunk(&forgs[i].forge, frames, handle->midi_MidiEvent, msg, sizeof(msg));
+							}
 						} break;
 						case FILTER_NOTE_PRESSURE:
 						{
@@ -1485,6 +1492,12 @@ filter_midi(plughandle_t *handle, vm_filter_t *filter, const uint8_t *msg, float
 			{
 				const uint8_t value = msg[1];
 				*f32 = (float)value / 0x7f;
+
+				return true;
+			}
+			else if(msg[0] == (LV2_MIDI_MSG_NOTE_OFF | filter->channel) )
+			{
+				*f32 = 0.f;
 
 				return true;
 			}
