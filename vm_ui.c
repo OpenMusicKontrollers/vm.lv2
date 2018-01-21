@@ -77,6 +77,11 @@ struct _plughandle_t {
 	LV2_Log_Logger logger;
 
 	nk_pugl_window_t win;
+	struct {
+		struct nk_image cancel;
+		struct nk_image up_arrow;
+		struct nk_image plus;
+	} icons;
 
 	LV2UI_Controller *controller;
 	LV2UI_Write_Function writer;
@@ -782,7 +787,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 				}
 				else
 				{
-					if(nk_button_label(ctx, "+")) // insert cmd
+					if(nk_button_image_label(ctx, handle->icons.plus, "", NK_TEXT_RIGHT)) // insert cmd
 					{
 						for(unsigned j = ITEMS_MAX - 1; j > i; j--)
 							handle->cmds[j] = handle->cmds[j - 1];
@@ -792,7 +797,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 						sync = true;
 					}
 
-					if(nk_button_label(ctx, "-")) // remove cmd
+					if(nk_button_image_label(ctx, handle->icons.cancel, "", NK_TEXT_RIGHT)) // remove cmd
 					{
 						for(unsigned j = i; j < ITEMS_MAX - 1; j++)
 							handle->cmds[j] = handle->cmds[j + 1];
@@ -804,7 +809,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 					{
 						nk_spacing(ctx, 1);
 					}
-					else if(nk_button_label(ctx, "^")) // swap cmd with one above
+					else if(nk_button_image_label(ctx, handle->icons.up_arrow, "", NK_TEXT_RIGHT)) // swap cmd with one above
 					{
 						const vm_command_t tmp = handle->cmds[i];
 						handle->cmds[i] = handle->cmds[i - 1];
@@ -1188,6 +1193,23 @@ instantiate(const LV2UI_Descriptor *descriptor, const char *plugin_uri,
 
 	*(intptr_t *)widget = nk_pugl_init(&handle->win);
 	nk_pugl_show(&handle->win);
+
+	char *icon_path;
+	if(asprintf(&icon_path, "%scancel.png", bundle_path) != -1)
+	{
+		handle->icons.cancel = nk_pugl_icon_load(&handle->win, icon_path);
+		free(icon_path);
+	}
+	if(asprintf(&icon_path, "%sup_arrow.png", bundle_path) != -1)
+	{
+		handle->icons.up_arrow= nk_pugl_icon_load(&handle->win, icon_path);
+		free(icon_path);
+	}
+	if(asprintf(&icon_path, "%splus.png", bundle_path) != -1)
+	{
+		handle->icons.plus= nk_pugl_icon_load(&handle->win, icon_path);
+		free(icon_path);
+	}
 
 	atom_ser_t *ser = &handle->ser;
 	ser->size = 1024;
