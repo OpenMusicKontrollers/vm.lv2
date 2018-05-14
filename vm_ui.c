@@ -857,7 +857,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 					{
 						float f32 = cmd->f32;
 						_wheel_float(ctx, &f32, stp);
-						nk_property_float(ctx, nil_label, -HUGE, &f32, HUGE, stp, fpp);
+						nk_property_float(ctx, nil_label, -HUGE_VAL, &f32, HUGE_VAL, stp, fpp);
 						if(f32 != cmd->f32)
 						{
 							cmd->f32 = f32;
