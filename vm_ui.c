@@ -1251,6 +1251,7 @@ port_event(LV2UI_Handle instance, uint32_t index, uint32_t size,
 
 	switch(index)
 	{
+		case 0:
 		case 1:
 		{
 			if(protocol == handle->atom_eventTransfer)
