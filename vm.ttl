@@ -1163,6 +1163,7 @@ vm:add
 	lv2:appliesTo vm:control ,
 		vm:cv ,
 		vm:atom ,
+		vm:midi ,
 		vm:audio ;
 	rdfs:label "Add" ;
 	state:state [
@@ -1181,6 +1182,7 @@ vm:sumLoop
 	lv2:appliesTo vm:control ,
 		vm:cv ,
 		vm:atom ,
+		vm:midi ,
 		vm:audio ;
 	rdfs:label "Sum in a loop" ;
 	state:state [
@@ -1212,6 +1214,7 @@ vm:sumLinear
 	lv2:appliesTo vm:control ,
 		vm:cv ,
 		vm:atom ,
+		vm:midi ,
 		vm:audio ;
 	rdfs:label "Sum" ;
 	state:state [
@@ -1242,6 +1245,7 @@ vm:sub
 	lv2:appliesTo vm:control ,
 		vm:cv ,
 		vm:atom ,
+		vm:midi ,
 		vm:audio ;
 	rdfs:label "Subtract" ;
 	state:state [
@@ -1260,6 +1264,7 @@ vm:mul
 	lv2:appliesTo vm:control ,
 		vm:cv ,
 		vm:atom ,
+		vm:midi ,
 		vm:audio ;
 	rdfs:label "Multiply" ;
 	state:state [
@@ -1278,6 +1283,7 @@ vm:div
 	lv2:appliesTo vm:control ,
 		vm:cv ,
 		vm:atom ,
+		vm:midi ,
 		vm:audio ;
 	rdfs:label "Divide" ;
 	state:state [
@@ -1296,6 +1302,7 @@ vm:mod
 	lv2:appliesTo vm:control ,
 		vm:cv ,
 		vm:atom ,
+		vm:midi ,
 		vm:audio ;
 	rdfs:label "Modulo" ;
 	state:state [
@@ -1314,6 +1321,7 @@ vm:pow
 	lv2:appliesTo vm:control ,
 		vm:cv ,
 		vm:atom ,
+		vm:midi ,
 		vm:audio ;
 	rdfs:label "Power" ;
 	state:state [
@@ -1332,6 +1340,7 @@ vm:dBFS
 	lv2:appliesTo vm:control ,
 		vm:cv ,
 		vm:atom ,
+		vm:midi ,
 		vm:audio ;
 	rdfs:label "dBFS" ;
 	lv2:port [
@@ -1357,6 +1366,7 @@ vm:rand
 	lv2:appliesTo vm:control ,
 		vm:cv ,
 		vm:atom ,
+		vm:midi ,
 		vm:audio ;
 	rdfs:label "Random" ;
 	state:state [
@@ -1380,6 +1390,7 @@ vm:sampleAndHold
 	lv2:appliesTo vm:control ,
 		vm:cv ,
 		vm:atom ,
+		vm:midi ,
 		vm:audio ;
 	rdfs:label "Sample and hold" ;
 	state:state [
@@ -1402,6 +1413,7 @@ vm:lfo
 	lv2:appliesTo vm:control ,
 		vm:cv ,
 		vm:atom ,
+		vm:midi ,
 		vm:audio ;
 	rdfs:label "LFO" ;
 	state:state [
