@@ -1359,7 +1359,7 @@ port_event(LV2UI_Handle instance, uint32_t index, uint32_t size,
 					ser->offset = 0;
 					lv2_atom_forge_set_sink(&handle->forge, _sink, _deref, ser);
 
-					LV2_Atom_Forge_Ref ref;
+					LV2_Atom_Forge_Ref ref = 0;
 					if(props_advance(&handle->props, &handle->forge, 0, obj, &ref))
 					{
 						nk_pugl_post_redisplay(&handle->win);
