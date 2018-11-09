@@ -753,7 +753,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 				ser->offset = 0;
 				lv2_atom_forge_set_sink(&handle->forge, _sink, _deref, ser);
 				vm_filter_serialize(&handle->forge, &handle->filt, handle->sourceFilter);
-				props_impl_t *impl = _props_bsearch(&handle->props, handle->vm_sourceFilter);
+				props_impl_t *impl = _props_impl_get(&handle->props, handle->vm_sourceFilter);
 				if(impl)
 					_props_impl_set(&handle->props, impl, ser->atom->type, ser->atom->size, LV2_ATOM_BODY_CONST(ser->atom));
 
@@ -969,7 +969,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 				ser->offset = 0;
 				lv2_atom_forge_set_sink(&handle->forge, _sink, _deref, ser);
 				vm_graph_serialize(handle->api, &handle->forge, handle->cmds);
-				props_impl_t *impl = _props_bsearch(&handle->props, handle->vm_graph);
+				props_impl_t *impl = _props_impl_get(&handle->props, handle->vm_graph);
 				if(impl)
 					_props_impl_set(&handle->props, impl, ser->atom->type, ser->atom->size, LV2_ATOM_BODY_CONST(ser->atom));
 
@@ -1061,7 +1061,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 				ser->offset = 0;
 				lv2_atom_forge_set_sink(&handle->forge, _sink, _deref, ser);
 				vm_filter_serialize(&handle->forge, &handle->filt, handle->destinationFilter);
-				props_impl_t *impl = _props_bsearch(&handle->props, handle->vm_destinationFilter);
+				props_impl_t *impl = _props_impl_get(&handle->props, handle->vm_destinationFilter);
 				if(impl)
 					_props_impl_set(&handle->props, impl, ser->atom->type, ser->atom->size, LV2_ATOM_BODY_CONST(ser->atom));
 
