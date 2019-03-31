@@ -1,6 +1,6 @@
-## Sherlock
+## VM
 
-### An investigative LV2 plugin bundle
+### A programmable virtual machine LV2 plugin
 
 #### Build status
 
