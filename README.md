@@ -1,24 +1,70 @@
-# vm.lv2
+## Sherlock
 
-## A simple Virtual Machine for LV2
+### An investigative LV2 plugin bundle
 
-
-### Build status
+#### Build status
 
 [![build status](https://gitlab.com/OpenMusicKontrollers/vm.lv2/badges/master/build.svg)](https://gitlab.com/OpenMusicKontrollers/vm.lv2/commits/master)
 
-### Dependencies
+### Binaries
 
-* [LV2](http://lv2plug.in) (LV2 Plugin Standard)
+For GNU/Linux (64-bit, 32-bit, armv7), Windows (64-bit, 32-bit) and MacOS
+(64/32-bit univeral).
 
-### Build / install
+To install the plugin bundle on your system, simply copy the __vm.lv2__
+folder out of the platform folder of the downloaded package into your
+[LV2 path](http://lv2plug.in/pages/filesystem-hierarchy-standard.html).
 
-	git clone https://git.open-music-kontrollers.ch/lv2/vm.lv2
-	cd vm.lv2
-	meson build
-	cd build
-	ninja -j4
-	sudo ninja install
+#### Stable release
+
+* [vm.lv2-0.4.0.zip](https://dl.open-music-kontrollers.ch/vm.lv2/stable/vm.lv2-0.4.0.zip) ([sig](https://dl.open-music-kontrollers.ch/vm.lv2/stable/vm.lv2-0.4.0.zip.sig))
+
+#### Unstable (nightly) release
+
+* [vm.lv2-latest-unstable.zip](https://dl.open-music-kontrollers.ch/vm.lv2/unstable/vm.lv2-latest-unstable.zip) ([sig](https://dl.open-music-kontrollers.ch/vm.lv2/unstable/vm.lv2-latest-unstable.zip.sig))
+
+### Sources
+
+#### Stable release
+
+* [vm.lv2-0.4.0.tar.xz](https://git.open-music-kontrollers.ch/lv2/vm.lv2/snapshot/vm.lv2-0.4.0.tar.xz)
+
+#### Git repository
+
+* <https://git.open-music-kontrollers.ch/lv2/vm.lv2>
+
+### Packages
+
+* [ArchLinux](https://www.archlinux.org/packages/community/x86_64/vm.lv2/)
+
+### Bugs and feature requests
+
+* [Gitlab](https://gitlab.com/OpenMusicKontrollers/vm.lv2)
+* [Github](https://github.com/OpenMusicKontrollers/vm.lv2)
+
+### Plugins
+
+![VM ](https://git.open-music-kontrollers.ch/lv2/vm.lv2/plain/screenshots/screenshot_1.png)
+
+#### Control VM
+
+Virtual machine for LV2 Control ports. Features 8 inputs and 8 outputs.
+
+#### CV VM
+
+Virtual machine for LV2 Control Voltage ports. Features 8 inputs and 8 outputs.
+
+#### Audio VM
+
+Virtual machine for LV2 Audio ports. Features 8 inputs and 8 outputs.
+
+#### Atom VM
+
+Virtual machine for LV2 Atom event ports. Features 8 inputs and 8 outputs.
+
+#### MIDI VM
+
+Virtual machine for LV2 MIDI event ports. Features 8 inputs and 8 outputs.
 
 ### License
 
