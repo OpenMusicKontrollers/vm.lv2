@@ -1115,7 +1115,6 @@ run_control(LV2_Handle instance, uint32_t nsamples)
 	int64_t last_t = 0;
 	LV2_ATOM_SEQUENCE_FOREACH(handle->control, ev)
 	{
-		const LV2_Atom *atom= &ev->body;
 		const LV2_Atom_Object *obj = (const LV2_Atom_Object *)&ev->body;
 
 		props_advance(&handle->props, &handle->forge, ev->time.frames, obj, &handle->ref);
@@ -1237,7 +1236,6 @@ run_cv_audio(LV2_Handle instance, uint32_t nsamples)
 	int64_t last_t = 0;
 	LV2_ATOM_SEQUENCE_FOREACH(handle->control, ev)
 	{
-		const LV2_Atom *atom= &ev->body;
 		const LV2_Atom_Object *obj = (const LV2_Atom_Object *)&ev->body;
 
 		props_advance(&handle->props, &handle->forge, ev->time.frames, obj, &handle->ref);
@@ -1373,7 +1371,6 @@ run_atom(LV2_Handle instance, uint32_t nsamples)
 		{
 			const bool is_control = (nxt == 0); // is event from control port?
 			const LV2_Atom_Event *ev = evs[nxt];
-			const LV2_Atom *atom= &ev->body;
 			const LV2_Atom_Object *obj = (const LV2_Atom_Object *)&ev->body;
 			const LV2_Atom_Float *f32 = (const LV2_Atom_Float *)&ev->body;
 

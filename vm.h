@@ -957,8 +957,6 @@ vm_graph_deserialize(vm_api_impl_t *impl, LV2_Atom_Forge *forge,
 
 	LV2_ATOM_TUPLE_BODY_FOREACH(body, size, item)
 	{
-		const LV2_Atom_Object *obj = (const LV2_Atom_Object *)item;
-
 		if(item->type == forge->Bool)
 		{
 			cmd->type = COMMAND_BOOL;
