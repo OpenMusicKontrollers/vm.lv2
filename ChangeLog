@@ -1,0 +1,16 @@
+# Changelog
+
+## [0.6.0] - 15 Apr 2019
+
+### Added
+
+* vm:midi MIDI Conversion plugin
+* ui button icons
+
+### Changed
+
+* build system from CMake to meson
+
+### Fixed
+
+* port_event callback to handle all patch ports
