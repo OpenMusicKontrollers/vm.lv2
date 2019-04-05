@@ -34,6 +34,8 @@ add_project_arguments('-D_GNU_SOURCE', language : 'c')
 add_project_arguments('-DPUGL_HAVE_GL', language : 'c')
 
 cp = find_program('cp')
+lv2_validate = find_program('lv2_validate', native : true, required : false)
+lv2lint = find_program('lv2lint', required : false)
 clone = [cp, '@INPUT@', '@OUTPUT@']
 
 c_args = ['-fvisibility=hidden',
@@ -87,19 +89,19 @@ ui = shared_module('vm_ui', ui_srcs,
 suffix = mod.full_path().strip().split('.')[-1]
 conf_data.set('MODULE_SUFFIX', '.' + suffix)
 
-configure_file(input : 'manifest.ttl.in', output : 'manifest.ttl',
+manifest_ttl = configure_file(input : 'manifest.ttl.in', output : 'manifest.ttl',
 	configuration : conf_data,
 	install : true,
 	install_dir : inst_dir)
 
-custom_target('dsp_ttl',
+dsp_ttl = custom_target('dsp_ttl',
 	input : 'vm.ttl',
 	output : 'vm.ttl',
 	command : clone,
 	install : true,
 	install_dir : inst_dir)
 
-custom_target('ui_ttl',
+ui_ttl = custom_target('ui_ttl',
 	input : 'vm_ui.ttl',
 	output : 'vm_ui.ttl',
 	command : clone,
@@ -130,3 +132,18 @@ custom_target('up_arrow_png',
 	command : clone,
 	install : true,
 	install_dir : inst_dir)
+
+if lv2_validate.found()
+	test('LV2 validate', lv2_validate,
+		args : [manifest_ttl, dsp_ttl, ui_ttl])
+endif
+
+if lv2lint.found()
+	test('LV2 lint', lv2lint,
+		args : ['-Ewarn',
+			'http://open-music-kontrollers.ch/lv2/vm#atom',
+			'http://open-music-kontrollers.ch/lv2/vm#audio',
+			'http://open-music-kontrollers.ch/lv2/vm#control',
+			'http://open-music-kontrollers.ch/lv2/vm#cv',
+			'http://open-music-kontrollers.ch/lv2/vm#midi'])
+endif
