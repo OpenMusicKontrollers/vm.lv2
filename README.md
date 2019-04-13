@@ -2,6 +2,12 @@
 
 ### A programmable virtual machine LV2 plugin
 
+This plugin bundle contains various plugins with a programmable stack-based
+virtual machine to modify up to 8 LV2 Control, CV, Audio, Atom and MIDI signals.
+
+To be used when that specific simple filter plugin you desperately need does
+not yet exist.
+
 #### Build status
 
 [![build status](https://gitlab.com/OpenMusicKontrollers/vm.lv2/badges/master/build.svg)](https://gitlab.com/OpenMusicKontrollers/vm.lv2/commits/master)
