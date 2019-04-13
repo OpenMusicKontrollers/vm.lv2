@@ -23,7 +23,7 @@ folder out of the platform folder of the downloaded package into your
 
 #### Stable release
 
-* [vm.lv2-0.4.0.zip](https://dl.open-music-kontrollers.ch/vm.lv2/stable/vm.lv2-0.4.0.zip) ([sig](https://dl.open-music-kontrollers.ch/vm.lv2/stable/vm.lv2-0.4.0.zip.sig))
+* [vm.lv2-0.6.0.zip](https://dl.open-music-kontrollers.ch/vm.lv2/stable/vm.lv2-0.6.0.zip) ([sig](https://dl.open-music-kontrollers.ch/vm.lv2/stable/vm.lv2-0.6.0.zip.sig))
 
 #### Unstable (nightly) release
 
@@ -33,7 +33,7 @@ folder out of the platform folder of the downloaded package into your
 
 #### Stable release
 
-* [vm.lv2-0.4.0.tar.xz](https://git.open-music-kontrollers.ch/lv2/vm.lv2/snapshot/vm.lv2-0.4.0.tar.xz)
+* [vm.lv2-0.6.0.tar.xz](https://git.open-music-kontrollers.ch/lv2/vm.lv2/snapshot/vm.lv2-0.6.0.tar.xz)
 
 #### Git repository
 
