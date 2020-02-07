@@ -5,6 +5,8 @@ project('vm.lv2', 'c', default_options : [
 	'b_lto=false',
 	'c_std=c11'])
 
+build_root = meson.build_root()
+
 cc = meson.get_compiler('c')
 
 m_dep = cc.find_library('m')
@@ -40,7 +42,6 @@ lv2lint = find_program('lv2lint', required : false)
 clone = [cp, '@INPUT@', '@OUTPUT@']
 
 c_args = ['-fvisibility=hidden',
-	'-ffast-math',
 	'-Wno-unused-variable',
 	'-Wno-unused-function',
 	'-Wno-misleading-indentation']
@@ -141,7 +142,8 @@ endif
 
 if lv2lint.found()
 	test('LV2 lint', lv2lint,
-		args : ['-Ewarn',
+		args : ['-I', join_paths(build_root, ''),
+			'-Ewarn',
 			'http://open-music-kontrollers.ch/lv2/vm#atom',
 			'http://open-music-kontrollers.ch/lv2/vm#audio',
 			'http://open-music-kontrollers.ch/lv2/vm#control',
