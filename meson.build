@@ -3,9 +3,21 @@ project('vm.lv2', 'c', default_options : [
 	'warning_level=1',
 	'werror=false',
 	'b_lto=false',
-	'c_std=c11'])
+	'c_std=gnu11'])
 
+nk_pugl = subproject('nk_pugl')
+
+lv2libdir = get_option('lv2libdir')
+
+inst_dir = join_paths(lv2libdir, meson.project_name())
+
+nk_pugl_dep = nk_pugl.get_variable('nk_pugl_gl')
+cousine_regular_ttf = nk_pugl.get_variable('cousine_regular_ttf')
+
+source_root = meson.source_root()
 build_root = meson.build_root()
+
+static_link = meson.is_cross_build()
 
 cc = meson.get_compiler('c')
 
@@ -13,15 +25,12 @@ m_dep = cc.find_library('m')
 lv2_dep = dependency('lv2', version : '>=1.14.0')
 
 dsp_deps = [m_dep, lv2_dep]
-ui_deps = [m_dep, lv2_dep]
-ui_links = []
+ui_deps = [m_dep, lv2_dep, nk_pugl_dep]
 
-pugl_inc = include_directories('pugl')
 props_inc = include_directories('props.lv2')
 timely_inc = include_directories('timely.lv2')
-inc_dir = [pugl_inc, props_inc, timely_inc]
-
-inst_dir = join_paths(get_option('libdir'), 'lv2', meson.project_name())
+nk_pugl_inc = include_directories(join_paths('subprojects', 'nk_pugl'))
+inc_dir = [props_inc, timely_inc, nk_pugl_inc]
 
 rawvers = run_command('cat', 'VERSION').stdout().strip()
 version = rawvers.split('.')
@@ -33,42 +42,24 @@ conf_data.set('MICRO_VERSION', version[2])
 
 add_project_arguments('-DVM_VERSION="'+rawvers+'"', language : 'c')
 add_project_arguments('-D_GNU_SOURCE', language : 'c')
-add_project_arguments('-DPUGL_HAVE_GL', language : 'c')
 
-cp = find_program('cp')
 lv2_validate = find_program('lv2_validate', native : true, required : false)
 sord_validate = find_program('sord_validate', native : true, required : false)
 lv2lint = find_program('lv2lint', required : false)
-clone = [cp, '@INPUT@', '@OUTPUT@']
-
-c_args = ['-fvisibility=hidden',
-	'-Wno-unused-variable',
-	'-Wno-unused-function',
-	'-Wno-misleading-indentation']
 
 dsp_srcs = ['vm.c']
 
 ui_srcs = ['vm_ui.c']
 
+c_args = [
+	'-fvisibility=hidden']
+
 if host_machine.system() == 'windows'
-	add_languages('cpp')
 	conf_data.set('UI_TYPE', 'WindowsUI')
-	ui_deps += cc.find_library('opengl32')
-	ui_deps += cc.find_library('gdi32')
-	ui_deps += cc.find_library('user32')
-	ui_srcs += 'pugl/pugl/pugl_win.cpp'
 elif host_machine.system() == 'darwin'
-	add_languages('objc')
 	conf_data.set('UI_TYPE', 'CocoaUI')
-	ui_links += ['-framework', 'OpenGL']
-	ui_links += ['-framework', 'Cocoa']
-	ui_srcs += 'pugl/pugl/pugl_osx.m'
 else
 	conf_data.set('UI_TYPE', 'X11UI')
-	ui_deps += dependency('gl')
-	ui_deps += dependency('x11', version : '>=1.6.0')
-	ui_deps += dependency('xext', version : '>=1.3.0')
-	ui_srcs += 'pugl/pugl/pugl_x11.c'
 endif
 
 mod = shared_module('vm', dsp_srcs,
@@ -84,54 +75,55 @@ ui = shared_module('vm_ui', ui_srcs,
 	include_directories : inc_dir,
 	name_prefix : '',
 	dependencies : ui_deps,
-	link_args : ui_links,
 	install : true,
 	install_dir : inst_dir)
 
 suffix = mod.full_path().strip().split('.')[-1]
 conf_data.set('MODULE_SUFFIX', '.' + suffix)
 
-manifest_ttl = configure_file(input : 'manifest.ttl.in', output : 'manifest.ttl',
+manifest_ttl = configure_file(
+	input : 'manifest.ttl.in',
+	output : 'manifest.ttl',
 	configuration : conf_data,
 	install : true,
 	install_dir : inst_dir)
 
-dsp_ttl = custom_target('dsp_ttl',
+dsp_ttl = configure_file(
 	input : 'vm.ttl',
 	output : 'vm.ttl',
-	command : clone,
+	copy : true,
 	install : true,
 	install_dir : inst_dir)
 
-ui_ttl = custom_target('ui_ttl',
+ui_ttl = configure_file(
 	input : 'vm_ui.ttl',
 	output : 'vm_ui.ttl',
-	command : clone,
+	copy : true,
 	install : true,
 	install_dir : inst_dir)
 
-custom_target('font',
-	input : join_paths('nuklear', 'extra_font', 'Cousine-Regular.ttf'),
+configure_file(
+	input : cousine_regular_ttf,
 	output : 'Cousine-Regular.ttf',
-	command : clone,
+	copy : true,
 	install : true,
 	install_dir : inst_dir)
-custom_target('cancel_png',
+configure_file(
 	input : join_paths('png', 'cancel.png'),
 	output : 'cancel.png',
-	command : clone,
+	copy : true,
 	install : true,
 	install_dir : inst_dir)
-custom_target('plus_png',
+configure_file(
 	input : join_paths('png', 'plus.png'),
 	output : 'plus.png',
-	command : clone,
+	copy : true,
 	install : true,
 	install_dir : inst_dir)
-custom_target('up_arrow_png',
+configure_file(
 	input : join_paths('png', 'up_arrow.png'),
 	output : 'up_arrow.png',
-	command : clone,
+	copy : true,
 	install : true,
 	install_dir : inst_dir)
 
