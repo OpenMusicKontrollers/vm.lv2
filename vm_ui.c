@@ -120,6 +120,23 @@ struct _plughandle_t {
 	vm_command_t cmds [ITEMS_MAX];
 };
 
+static const char *command_labels [COMMAND_MAX] = {
+	[COMMAND_NOP]      = "",
+	[COMMAND_OPCODE]   = "Operation",
+	[COMMAND_BOOL]     = "Boolean",
+	[COMMAND_INT]      = "Integer",
+	[COMMAND_FLOAT]    = "Float",
+};
+
+static const char *filter_labels [FILTER_MAX] = {
+	[FILTER_CONTROLLER]       = "Controller",
+	[FILTER_BENDER]           = "Bender",
+	[FILTER_PROGRAM_CHANGE]   = "Program Change",
+	[FILTER_CHANNEL_PRESSURE] = "Channel Pressure",
+	[FILTER_NOTE_ON]          = "Note On",
+	[FILTER_NOTE_PRESSURE]    = "Note Pressure",
+};
+
 static const char *input_labels [CTRL_MAX] = {
 	"In 0:",
 	"In 1:",
@@ -149,7 +166,8 @@ static const char *chn_label = "#chn:";
 static const char *val_label = "#val:";
 
 static void
-_intercept_graph(void *data, int64_t frames, props_impl_t *impl)
+_intercept_graph(void *data, int64_t frames __attribute__((unused)),
+	props_impl_t *impl)
 {
 	plughandle_t *handle = data;
 
@@ -160,7 +178,8 @@ _intercept_graph(void *data, int64_t frames, props_impl_t *impl)
 }
 
 static void
-_intercept_sourceFilter(void *data, int64_t frames, props_impl_t *impl)
+_intercept_sourceFilter(void *data, int64_t frames __attribute__((unused)),
+	props_impl_t *impl)
 {
 	plughandle_t *handle = data;
 
@@ -172,7 +191,8 @@ _intercept_sourceFilter(void *data, int64_t frames, props_impl_t *impl)
 }
 
 static void
-_intercept_destinationFilter(void *data, int64_t frames, props_impl_t *impl)
+_intercept_destinationFilter(void *data, int64_t frames __attribute__((unused)),
+	props_impl_t *impl)
 {
 	plughandle_t *handle = data;
 
@@ -711,7 +731,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 					int filter_type = filter->type;
 					nk_combobox(ctx, filter_labels, FILTER_MAX, &filter_type,
 						dy, nk_vec2(nk_widget_width(ctx), dy*14)); //FIXME
-					if(filter->type != filter_type)
+					if(filter->type != (vm_filter_enum_t)filter_type)
 					{
 						filter->type = filter_type;
 						sync = true;
@@ -821,7 +841,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 				int cmd_type = old_cmd_type;
 				nk_combobox(ctx, command_labels, COMMAND_MAX, &cmd_type,
 					dy, nk_vec2(nk_widget_width(ctx), dy*14));
-				if(old_cmd_type != cmd_type)
+				if(old_cmd_type != (vm_command_enum_t)cmd_type)
 				{
 					cmd->type = cmd_type;
 					cmd->i32 = 0; // reset value
@@ -1019,7 +1039,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 					int filter_type = filter->type;
 					nk_combobox(ctx, filter_labels, FILTER_MAX, &filter_type,
 						dy, nk_vec2(nk_widget_width(ctx), dy*14)); //FIXME
-					if(filter->type != filter_type)
+					if(filter->type != (vm_filter_enum_t)filter_type)
 					{
 						filter->type = filter_type;
 						sync = true;
@@ -1242,8 +1262,8 @@ cleanup(LV2UI_Handle instance)
 }
 
 static void
-port_event(LV2UI_Handle instance, uint32_t index, uint32_t size,
-	uint32_t protocol, const void *buf)
+port_event(LV2UI_Handle instance, uint32_t index,
+	uint32_t size __attribute__((unused)), uint32_t protocol, const void *buf)
 {
 	plughandle_t *handle = instance;
 
@@ -1258,7 +1278,7 @@ port_event(LV2UI_Handle instance, uint32_t index, uint32_t size,
 
 				if(atom->type == handle->forge.Long)
 				{
-					const LV2_Atom_Long *off = buf;
+					const LV2_Atom_Long *off = (const LV2_Atom_Long *)atom;
 
 					const int64_t dt = off->body - handle->off;
 					handle->off = off->body;
@@ -1329,8 +1349,13 @@ port_event(LV2UI_Handle instance, uint32_t index, uint32_t size,
 				}
 				else if(atom->type == handle->forge.Tuple)
 				{
-					const LV2_Atom_Int *idx = buf + 8;
-					const LV2_Atom_Float *val = buf + 8 + 16;
+					const LV2_Atom_Tuple *tup = (const LV2_Atom_Tuple *)atom;
+
+					const LV2_Atom *itr = lv2_atom_tuple_begin(tup);
+					const LV2_Atom_Int *idx = (const LV2_Atom_Int *)itr;
+
+					itr = lv2_atom_tuple_next(itr);
+					const LV2_Atom_Float *val = (const LV2_Atom_Float *)itr;
 
 					if(idx->body < 10)
 					{
@@ -1351,7 +1376,7 @@ port_event(LV2UI_Handle instance, uint32_t index, uint32_t size,
 				}
 				else // !tuple
 				{
-					const LV2_Atom_Object *obj = buf;
+					const LV2_Atom_Object *obj = (const LV2_Atom_Object *)atom;
 
 					atom_ser_t *ser = &handle->ser;
 					ser->offset = 0;

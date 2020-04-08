@@ -171,7 +171,8 @@ _dirty(plughandle_t *handle)
 }
 
 static void
-_intercept_graph(void *data, int64_t frames, props_impl_t *impl)
+_intercept_graph(void *data, int64_t frames __attribute__((unused)),
+	props_impl_t *impl)
 {
 	plughandle_t *handle = data;
 
@@ -185,7 +186,8 @@ _intercept_graph(void *data, int64_t frames, props_impl_t *impl)
 }
 
 static void
-_intercept_sourceFilter(void *data, int64_t frames, props_impl_t *impl)
+_intercept_sourceFilter(void *data, int64_t frames __attribute__((unused)),
+	props_impl_t *impl)
 {
 	plughandle_t *handle = data;
 
@@ -200,7 +202,8 @@ _intercept_sourceFilter(void *data, int64_t frames, props_impl_t *impl)
 }
 
 static void
-_intercept_destinationFilter(void *data, int64_t frames, props_impl_t *impl)
+_intercept_destinationFilter(void *data, int64_t frames __attribute__((unused)),
+	props_impl_t *impl)
 {
 	plughandle_t *handle = data;
 
@@ -239,15 +242,16 @@ static const props_def_t defs [MAX_NPROPS] = {
 };
 
 static void
-_cb(timely_t *timely, int64_t frames, LV2_URID type, void *data)
+_cb(timely_t *timely __attribute__((unused)), int64_t frames __attribute__((unused)),
+	LV2_URID type __attribute__((unused)), void *data __attribute__((unused)))
 {
-	plughandle_t *handle = data;
-	(void)handle;
+	// nothing to do
 }
 
 static LV2_Handle
 instantiate(const LV2_Descriptor* descriptor, num_t rate,
-	const char *bundle_path, const LV2_Feature *const *features)
+	const char *bundle_path __attribute__((unused)),
+	const LV2_Feature *const *features)
 {
 	plughandle_t *handle = calloc(1, sizeof(plughandle_t));
 	if(!handle)
@@ -1438,7 +1442,7 @@ run_midi_advance(plughandle_t *handle, const LV2_Atom_Object *obj,
 }
 
 static bool
-filter_midi(plughandle_t *handle, vm_filter_t *filter, const uint8_t *msg, float *f32)
+filter_midi(vm_filter_t *filter, const uint8_t *msg, float *f32)
 {
 	switch(filter->type)
 	{
@@ -1621,7 +1625,7 @@ run_midi(LV2_Handle instance, uint32_t nsamples)
 				props_advance(&handle->props, &handle->forge, ev->time.frames, obj, &handle->ref);
 			}
 			else if( (atom->type == handle->midi_MidiEvent)
-				&& filter_midi(handle, &handle->sourceFilter[nxt-1], msg, &f32) )
+				&& filter_midi(&handle->sourceFilter[nxt-1], msg, &f32) )
 			{
 				pin[nxt-1] = f32;
 			}

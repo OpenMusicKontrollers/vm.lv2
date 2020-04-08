@@ -59,33 +59,21 @@
 
 #include <props.lv2/props.h>
 
-typedef enum _vm_plug_enum_t vm_plug_enum_t;
-typedef enum _vm_status_t vm_status_t;
-typedef enum _vm_opcode_enum_t vm_opcode_enum_t;
-typedef enum _vm_command_enum_t vm_command_enum_t;
-typedef enum _vm_filter_enum_t vm_filter_enum_t;
-typedef struct _vm_command_t vm_command_t;
-typedef struct _vm_api_def_t vm_api_def_t;
-typedef struct _vm_api_impl_t vm_api_impl_t;
-typedef struct _vm_filter_impl_t vm_filter_impl_t;
-typedef struct _vm_filter_t vm_filter_t;
-typedef struct _plugstate_t plugstate_t;
-
-enum _vm_plug_enum_t {
+typedef enum _vm_plug_enum_t {
 	VM_PLUG_CONTROL = 0,
 	VM_PLUG_CV,
 	VM_PLUG_AUDIO,
 	VM_PLUG_ATOM,
 	VM_PLUG_MIDI
-};
+} vm_plug_enum_t;
 
-enum _vm_status_t {
+typedef enum _vm_status_t {
 	VM_STATUS_STATIC   = (0 << 0),
 	VM_STATUS_HAS_TIME = (1 << 1),
 	VM_STATUS_HAS_RAND = (1 << 2),
-};
+} vm_status_t;
 
-enum _vm_opcode_enum_t {
+typedef enum _vm_opcode_enum_t {
 	OP_NOP = 0,
 
 	OP_CTRL,
@@ -171,9 +159,9 @@ enum _vm_opcode_enum_t {
 	OP_SPEED,
 
 	OP_MAX,
-};
+} vm_opcode_enum_t ;
 
-enum _vm_command_enum_t {
+typedef enum _vm_command_enum_t {
 	COMMAND_NOP = 0,
 
 	COMMAND_OPCODE,
@@ -182,9 +170,9 @@ enum _vm_command_enum_t {
 	COMMAND_FLOAT,
 
 	COMMAND_MAX,
-};
+} vm_command_enum_t;
 
-enum _vm_filter_enum_t {
+typedef enum _vm_filter_enum_t {
 	FILTER_CONTROLLER = 0,
 	FILTER_BENDER,
 	FILTER_PROGRAM_CHANGE,
@@ -193,7 +181,14 @@ enum _vm_filter_enum_t {
 	FILTER_NOTE_PRESSURE,
 
 	FILTER_MAX,
-};
+} vm_filter_enum_t;
+
+typedef struct _vm_command_t vm_command_t;
+typedef struct _vm_api_def_t vm_api_def_t;
+typedef struct _vm_api_impl_t vm_api_impl_t;
+typedef struct _vm_filter_impl_t vm_filter_impl_t;
+typedef struct _vm_filter_t vm_filter_t;
+typedef struct _plugstate_t plugstate_t;
 
 struct _vm_command_t {
 	vm_command_enum_t type;
@@ -241,23 +236,6 @@ struct _plugstate_t {
 	uint8_t graph [GRAPH_SIZE];
 	uint8_t sourceFilter [FILTER_SIZE];
 	uint8_t destinationFilter [FILTER_SIZE];
-};
-
-static const char *command_labels [COMMAND_MAX] = {
-	[COMMAND_NOP]      = "",
-	[COMMAND_OPCODE]   = "Operation",
-	[COMMAND_BOOL]     = "Boolean",
-	[COMMAND_INT]      = "Integer",
-	[COMMAND_FLOAT]    = "Float",
-};
-
-static const char *filter_labels [FILTER_MAX] = {
-	[FILTER_CONTROLLER]       = "Controller",
-	[FILTER_BENDER]           = "Bender",
-	[FILTER_PROGRAM_CHANGE]   = "Program Change",
-	[FILTER_CHANNEL_PRESSURE] = "Channel Pressure",
-	[FILTER_NOTE_ON]          = "Note On",
-	[FILTER_NOTE_PRESSURE]    = "Note Pressure",
 };
 
 static const vm_api_def_t vm_api_def [OP_MAX] = {
