@@ -50,7 +50,7 @@ folder out of the platform folder of the downloaded package into your
 
 ### Plugins
 
-![VM ](https://git.open-music-kontrollers.ch/lv2/vm.lv2/plain/screenshots/screenshot_1.png)
+![VM ](/screenshots/screenshot_1.png)
 
 #### Control VM
 
