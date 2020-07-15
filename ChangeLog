@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.10.0] - 15 Jul 2020
+
+### Added
+
+* support for GL double buffering
+
 ## [0.8.0] - 13 Apr 2020
 
 ### Changed

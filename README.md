@@ -34,6 +34,7 @@ folder out of the platform folder of the downloaded package into your
 #### Stable release
 
 * [vm.lv2-0.8.0.tar.xz](https://git.open-music-kontrollers.ch/lv2/vm.lv2/snapshot/vm.lv2-0.8.0.tar.xz)
+([sig](https://git.open-music-kontrollers.ch/lv2/vm.lv2/snapshot/vm.lv2-0.8.0.tar.xz.asc))
 
 #### Git repository
 
