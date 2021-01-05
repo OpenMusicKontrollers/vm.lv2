@@ -67,6 +67,8 @@ struct _plughandle_t {
 
 	vm_plug_enum_t vm_plug;
 
+	float scale;
+
 	LV2_URID atom_eventTransfer;
 	LV2_URID vm_graph;
 	LV2_URID vm_sourceFilter;
@@ -513,7 +515,7 @@ _expose(struct nk_context *ctx, struct nk_rect wbounds, void *data)
 {
 	plughandle_t *handle = data;
 
-	handle->dy = 20.f * nk_pugl_get_scale(&handle->win);
+	handle->dy = 20.f * handle->scale;
 	const float dy = handle->dy;
 
 	// mouse sensitivity for dragable property widgets
@@ -1111,17 +1113,29 @@ instantiate(const LV2UI_Descriptor *descriptor, const char *plugin_uri,
 	for(int i=0; features[i]; i++)
 	{
 		if(!strcmp(features[i]->URI, LV2_UI__parent))
+		{
 			parent = features[i]->data;
+		}
 		else if(!strcmp(features[i]->URI, LV2_UI__resize))
+		{
 			host_resize = features[i]->data;
+		}
 		else if(!strcmp(features[i]->URI, LV2_URID__map))
+		{
 			handle->map = features[i]->data;
+		}
 		else if(!strcmp(features[i]->URI, LV2_URID__unmap))
+		{
 			handle->unmap = features[i]->data;
+		}
 		else if(!strcmp(features[i]->URI, LV2_LOG__log))
+		{
 			handle->log = features[i]->data;
+		}
 		else if(!strcmp(features[i]->URI, LV2_OPTIONS__options))
+		{
 			opts = features[i]->data;
+		}
 	}
 
 	if(!parent)
@@ -1144,19 +1158,29 @@ instantiate(const LV2UI_Descriptor *descriptor, const char *plugin_uri,
 
 	lv2_atom_forge_init(&handle->forge, handle->map);
 
-	const LV2_URID param_sampleRate = handle->map->map(handle->map->handle, LV2_PARAMETERS__sampleRate);
-	if(opts)
+	const LV2_URID param_sampleRate = handle->map->map(handle->map->handle,
+		LV2_PARAMETERS__sampleRate);
+	const LV2_URID ui_scaleFactor = handle->map->map(handle->map->handle,
+		LV2_UI__scaleFactor);
+
+	for(LV2_Options_Option *opt = opts;
+		(opt->key != 0) && (opt->value != NULL);
+		opt++)
 	{
-		for(LV2_Options_Option *opt = opts;
-			(opt->key != 0) && (opt->value != NULL);
-			opt++)
+		if( (opt->key == param_sampleRate) && (opt->type == handle->forge.Float) )
 		{
-			if( (opt->key == param_sampleRate) && (opt->type == handle->forge.Float) )
-				handle->sample_rate = *(const float *)opt->value;
+			handle->sample_rate = *(const float *)opt->value;
+		}
+		else if( (opt->key == ui_scaleFactor) && (opt->type == handle->forge.Float) )
+		{
+			handle->scale = *(const float*)opt->value;
 		}
 	}
+
 	if(!handle->sample_rate)
+	{
 		handle->sample_rate = 48000.f; // fall-back
+	}
 
 	vm_api_init(handle->api, handle->map);
 
@@ -1210,6 +1234,12 @@ instantiate(const LV2UI_Descriptor *descriptor, const char *plugin_uri,
 	cfg->font.size = 13;
 
 	*(intptr_t *)widget = nk_pugl_init(&handle->win);
+
+	if(handle->scale == 0.f)
+	{
+		handle->scale = nk_pugl_get_scale(&handle->win);
+	}
+
 	nk_pugl_show(&handle->win);
 
 	char *icon_path;
