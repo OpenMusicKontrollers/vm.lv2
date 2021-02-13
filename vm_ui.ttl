@@ -45,7 +45,7 @@ vm:vm_ui
 		lv2:symbol "notify" ;
 		ui:protocol atom:eventTransfer
 	] ;
-	lv2:requiredFeature ui:idleInterface, urid:map, urid:unmap, opts:options ;
+	lv2:requiredFeature ui:idleInterface, urid:map, urid:unmap, opts:options, ui:parent ;
 	lv2:optionalFeature log:log, ui:resize, opts:options ;
 	opts:supportedOption ui:scaleFactor ;
   lv2:extensionData ui:idleInterface, ui:resize ;
