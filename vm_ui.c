@@ -1182,6 +1182,11 @@ instantiate(const LV2UI_Descriptor *descriptor, const char *plugin_uri,
 		handle->sample_rate = 48000.f; // fall-back
 	}
 
+	if(handle->scale == 0.f)
+	{
+		handle->scale = nk_pugl_get_scale();
+	}
+
 	vm_api_init(handle->api, handle->map);
 
 	const int nprops = handle->vm_plug == VM_PLUG_MIDI
@@ -1218,8 +1223,8 @@ instantiate(const LV2UI_Descriptor *descriptor, const char *plugin_uri,
 	handle->writer = write_function;
 
 	nk_pugl_config_t *cfg = &handle->win.cfg;
-	cfg->width = 1280;
-	cfg->height = 720;
+	cfg->width = 1280 * handle->scale;
+	cfg->height = 720 * handle->scale;
 	cfg->resizable = true;
 	cfg->ignore = false;
 	cfg->class = "vm";
@@ -1231,14 +1236,9 @@ instantiate(const LV2UI_Descriptor *descriptor, const char *plugin_uri,
 
 	if(asprintf(&cfg->font.face, "%sCousine-Regular.ttf", bundle_path) == -1)
 		cfg->font.face = NULL;
-	cfg->font.size = 13;
+	cfg->font.size = 13 * handle->scale;
 
 	*(intptr_t *)widget = nk_pugl_init(&handle->win);
-
-	if(handle->scale == 0.f)
-	{
-		handle->scale = nk_pugl_get_scale(&handle->win);
-	}
 
 	nk_pugl_show(&handle->win);
 
