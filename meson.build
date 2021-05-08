@@ -29,8 +29,7 @@ ui_deps = [m_dep, lv2_dep, nk_pugl_dep]
 
 props_inc = include_directories('props.lv2')
 timely_inc = include_directories('timely.lv2')
-nk_pugl_inc = include_directories(join_paths('subprojects', 'nk_pugl'))
-inc_dir = [props_inc, timely_inc, nk_pugl_inc]
+inc_dir = [props_inc, timely_inc]
 
 rawvers = run_command('cat', 'VERSION').stdout().strip()
 version = rawvers.split('.')
